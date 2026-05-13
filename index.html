@@ -19,13 +19,11 @@
 <body class="pb-20">
 
     <div id="app" class="max-w-md mx-auto p-4">
-        <!-- 头部 -->
         <header class="mb-6 flex justify-between items-center">
             <h1 class="text-2xl font-bold text-slate-800">我的补剂库存</h1>
             <button onclick="showPage('settings')" class="text-slate-500"><i class="fas fa-cog text-xl"></i></button>
         </header>
 
-        <!-- 页面：库存列表 -->
         <div id="inventory" class="tab-content active">
             <div id="empty-state" class="text-center py-10 hidden">
                 <i class="fas fa-box-open text-5xl text-slate-300 mb-4"></i>
@@ -34,7 +32,6 @@
             <div id="inventory-list" class="space-y-3"></div>
         </div>
 
-        <!-- 页面：入库 -->
         <div id="add" class="tab-content">
             <div class="card p-4 mb-4">
                 <h2 class="font-bold mb-4">快速识别入库</h2>
@@ -45,7 +42,7 @@
                     </button>
                     <label class="bg-slate-100 text-slate-600 p-3 rounded-lg flex flex-col items-center cursor-pointer">
                         <i class="fas fa-barcode text-xl mb-1"></i>
-                        <span class="text-xs">扫码(暂不可用)</span>
+                        <span class="text-xs">手动输入</span>
                     </label>
                 </div>
                 <div id="loading" class="hidden mt-4 text-center">
@@ -55,38 +52,34 @@
             </div>
 
             <div class="card p-4">
-                <h2 class="font-bold mb-4">手动填写</h2>
+                <h2 class="font-bold mb-4">入库详情</h2>
                 <div class="space-y-3">
-                    <input type="text" id="brand" placeholder="品牌 (如 Nutricost)" class="w-full border p-2 rounded">
-                    <input type="text" id="name" placeholder="产品名称 (如 TUDCA)" class="w-full border p-2 rounded">
-                    <input type="text" id="spec" placeholder="规格 (如 500mg * 60粒)" class="w-full border p-2 rounded">
+                    <input type="text" id="brand" placeholder="品牌" class="w-full border p-2 rounded">
+                    <input type="text" id="name" placeholder="产品名称" class="w-full border p-2 rounded">
+                    <input type="text" id="spec" placeholder="规格" class="w-full border p-2 rounded">
                     <div class="flex gap-2">
-                        <input type="number" id="stock" placeholder="当前库存(粒/瓶)" class="w-full border p-2 rounded">
-                        <input type="number" id="daily" placeholder="每日用量" class="w-full border p-2 rounded">
+                        <input type="number" id="stock" placeholder="现有量" class="w-full border p-2 rounded">
+                        <input type="number" id="daily" placeholder="日用量" class="w-full border p-2 rounded">
                     </div>
                     <button onclick="saveItem()" class="w-full bg-slate-800 text-white p-3 rounded-lg font-bold">确认入库</button>
                 </div>
             </div>
         </div>
 
-        <!-- 页面：补货 -->
         <div id="shopping" class="tab-content">
             <h2 class="font-bold mb-4">建议补货清单</h2>
             <div id="shopping-list" class="space-y-3"></div>
         </div>
 
-        <!-- 页面：设置 -->
         <div id="settings" class="tab-content">
             <div class="card p-4">
                 <h2 class="font-bold mb-4 text-red-600">设置 API 密钥</h2>
-                <p class="text-xs text-slate-500 mb-4">请粘贴你的 Gemini API Key，它将仅保存在此设备本地。</p>
-                <input type="password" id="api-key" placeholder="粘贴 AIzaSy... 开头的密钥" class="w-full border p-2 rounded mb-4">
+                <input type="password" id="api-key" placeholder="粘贴 Gemini API Key" class="w-full border p-2 rounded mb-4">
                 <button onclick="saveApiKey()" class="w-full bg-red-500 text-white p-3 rounded-lg font-bold">保存并生效</button>
                 <div id="key-status" class="mt-2 text-xs text-center"></div>
             </div>
         </div>
 
-        <!-- 底部导航 -->
         <nav class="fixed bottom-0 left-0 right-0 bg-white border-t flex justify-around p-3 shadow-lg">
             <button onclick="showPage('inventory')" class="nav-btn text-blue-600" data-page="inventory">
                 <i class="fas fa-box"></i><span class="block text-[10px]">库存</span>
@@ -100,7 +93,6 @@
         </nav>
     </div>
 
-    <!-- 相机交互层 -->
     <input type="file" id="camera-input" accept="image/*" capture="environment" class="hidden" onchange="handleImage(this)">
 
     <script>
@@ -156,10 +148,9 @@
                 const base64Image = reader.result.split(',')[1];
                 const apiKey = localStorage.getItem('gemini_api_key');
                 
-                const prompt = `你是一个专业的营养补剂专家。请识别这张照片中的补剂产品。
-                返回严格的 JSON 格式：
-                {"brand": "品牌名", "name": "产品具体名称", "spec": "规格如500mg*60粒"}
-                如果无法确定，请尽量推测最可能的结果。不要返回任何 Markdown 标记，只返回 JSON 字符串。`;
+                const prompt = `你是一个补剂专家。请识别照片中的补剂。
+                返回严格JSON格式，不要包含markdown或额外文字：
+                {"brand": "品牌", "name": "产品名", "spec": "规格"}`;
 
                 try {
                     const response = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${apiKey}`, {
@@ -176,11 +167,9 @@
                     });
 
                     const data = await response.json();
-                    
                     if (data.error) throw new Error(data.error.message);
 
-                    let text = data.contents[0].parts[0].text;
-                    // 过滤掉可能存在的 markdown 代码块
+                    let text = data.candidates[0].content.parts[0].text;
                     text = text.replace(/```json|```/g, '').trim();
                     const result = JSON.parse(text);
 
@@ -188,10 +177,10 @@
                     document.getElementById('name').value = result.name || '';
                     document.getElementById('spec').value = result.spec || '';
                     
-                    alert('AI 识别成功！请检查并补充库存数量。');
+                    alert('AI 识别成功！');
                 } catch (err) {
                     console.error(err);
-                    alert('识别失败: ' + err.message + '\n请尝试手动填写。');
+                    alert('识别失败：' + err.message);
                 } finally {
                     document.getElementById('loading').classList.add('hidden');
                 }
@@ -206,22 +195,12 @@
                 name: document.getElementById('name').value,
                 spec: document.getElementById('spec').value,
                 stock: parseInt(document.getElementById('stock').value) || 0,
-                daily: parseInt(document.getElementById('daily').value) || 1,
-                date: new Date().toLocaleDateString()
+                daily: parseInt(document.getElementById('daily').value) || 1
             };
-
-            if(!item.name) return alert('请输入产品名称');
-            
+            if(!item.name) return alert('请输入名称');
             inventory.push(item);
             localStorage.setItem('supplements', JSON.stringify(inventory));
-            
-            // 清空
-            document.getElementById('brand').value = '';
-            document.getElementById('name').value = '';
-            document.getElementById('spec').value = '';
-            document.getElementById('stock').value = '';
-            document.getElementById('daily').value = '';
-            
+            document.querySelectorAll('#add input').forEach(i => i.value = '');
             showPage('inventory');
         }
 
@@ -229,39 +208,20 @@
             const list = document.getElementById('inventory-list');
             const empty = document.getElementById('empty-state');
             list.innerHTML = '';
-            
-            if(inventory.length === 0) {
-                empty.classList.remove('hidden');
-                return;
-            }
+            if(inventory.length === 0) return empty.classList.remove('hidden');
             empty.classList.add('hidden');
-
             inventory.forEach(item => {
                 const daysLeft = Math.floor(item.stock / item.daily);
-                let statusClass = 'status-ok';
-                if(daysLeft <= 7) statusClass = 'status-empty';
-                else if(daysLeft <= 14) statusClass = 'status-low';
-
+                let statusClass = daysLeft <= 7 ? 'status-empty' : (daysLeft <= 14 ? 'status-low' : 'status-ok');
                 const div = document.createElement('div');
                 div.className = `card p-4 flex justify-between items-center ${statusClass}`;
-                div.innerHTML = `
-                    <div>
-                        <div class="text-xs text-slate-400">${item.brand}</div>
-                        <div class="font-bold">${item.name}</div>
-                        <div class="text-xs text-slate-500">${item.spec}</div>
-                    </div>
-                    <div class="text-right">
-                        <div class="text-lg font-bold ${daysLeft <= 7 ? 'text-red-500' : ''}">${item.stock}</div>
-                        <div class="text-[10px] text-slate-400">约剩 ${daysLeft} 天</div>
-                        <button onclick="deleteItem(${item.id})" class="text-slate-300 text-xs mt-2"><i class="fas fa-trash"></i></button>
-                    </div>
-                `;
+                div.innerHTML = `<div><div class="text-xs text-slate-400">${item.brand}</div><div class="font-bold">${item.name}</div></div><div class="text-right"><div class="text-lg font-bold">${item.stock}</div><div class="text-[10px] text-slate-400">剩${daysLeft}天</div><button onclick="deleteItem(${item.id})" class="text-slate-300 text-xs mt-2"><i class="fas fa-trash"></i></button></div>`;
                 list.appendChild(div);
             });
         }
 
         function deleteItem(id) {
-            if(!confirm('确定删除此补剂吗？')) return;
+            if(!confirm('确定删除吗？')) return;
             inventory = inventory.filter(i => i.id !== id);
             localStorage.setItem('supplements', JSON.stringify(inventory));
             renderInventory();
@@ -270,32 +230,15 @@
         function renderShopping() {
             const list = document.getElementById('shopping-list');
             list.innerHTML = '';
-            
             const lowStock = inventory.filter(item => (item.stock / item.daily) <= 14);
-            
-            if(lowStock.length === 0) {
-                list.innerHTML = '<div class="text-center py-10 text-slate-400">目前库存充足，无需补货</div>';
-                return;
-            }
-
+            if(lowStock.length === 0) return list.innerHTML = '<div class="text-center py-10 text-slate-400">充足</div>';
             lowStock.forEach(item => {
-                const daysLeft = Math.floor(item.stock / item.daily);
                 const div = document.createElement('div');
-                div.className = 'card p-4 flex justify-between bg-orange-50 border-orange-200 border';
-                div.innerHTML = `
-                    <div>
-                        <div class="font-bold">${item.name}</div>
-                        <div class="text-xs text-orange-600">库存紧急：仅剩约 ${daysLeft} 天</div>
-                    </div>
-                    <a href="https://cn.iherb.com/search?kw=${encodeURIComponent(item.name)}" target="_blank" class="bg-orange-500 text-white px-3 py-1 rounded text-xs flex items-center">
-                        去 iHerb 囤货
-                    </a>
-                `;
+                div.className = 'card p-4 flex justify-between bg-orange-50';
+                div.innerHTML = `<div><div class="font-bold">${item.name}</div><div class="text-xs text-orange-600">剩${Math.floor(item.stock/item.daily)}天</div></div><a href="https://cn.iherb.com/search?kw=${encodeURIComponent(item.name)}" target="_blank" class="bg-orange-500 text-white px-3 py-1 rounded text-xs flex items-center">补货</a>`;
                 list.appendChild(div);
             });
         }
-
-        // 初始化
         showPage('inventory');
     </script>
 </body>
