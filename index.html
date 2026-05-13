@@ -384,7 +384,34 @@ async function scanPhoto() {
       throw new Error('无法解析 AI 返回');
     }
 
-    const result = JSON.parse(match[0]);
+    let cleaned = match[0]
+      .replace(/,\s*}/g, '}')
+      .replace(/,\s*]/g, ']')
+      .trim();
+
+    let result;
+
+    try {
+      result = JSON.parse(cleaned);
+    } catch (e) {
+      console.error('JSON parse failed:', cleaned);
+
+      const brandMatch = cleaned.match(/\"brand\"\s*:\s*\"([^\"]*)\"/i);
+      const nameMatch = cleaned.match(/\"name\"\s*:\s*\"([^\"]*)\"/i);
+      const dosageMatch = cleaned.match(/\"dosage\"\s*:\s*\"([^\"]*)\"/i);
+      const countMatch = cleaned.match(/\"count\"\s*:\s*\"([^\"]*)\"/i);
+
+      result = {
+        brand: brandMatch ? brandMatch[1] : '',
+        name: nameMatch ? nameMatch[1] : '',
+        dosage: dosageMatch ? dosageMatch[1] : '',
+        count: countMatch ? countMatch[1] : ''
+      };
+
+      if (!result.name && !result.brand) {
+        throw new Error('AI 返回格式异常');
+      }
+    }
 
     const ok = confirm(
 `品牌: ${result.brand || '-'}
