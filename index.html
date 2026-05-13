@@ -544,6 +544,21 @@
   <div id="shopping-list"></div>
 </div>
 
+<div class="page" id="page-settings">
+  <div class="section-title">AI 拍照识别设置</div>
+  <div style="background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);padding:16px;margin-bottom:16px;font-size:13px;color:var(--muted);line-height:1.7">
+    拍照识别功能需要 Google Gemini API 密钥。<br>
+    密钥只保存在你的设备本地，不会上传到任何服务器。<br><br>
+    获取方式：打开 <strong style="color:var(--accent2)">aistudio.google.com</strong> → Get API Key → Create API Key
+  </div>
+  <div class="input-group">
+    <label class="input-label">Gemini API 密钥</label>
+    <input type="password" id="settings-apikey" placeholder="粘贴你的 API 密钥" />
+  </div>
+  <button class="btn-primary" onclick="saveApiKey()">💾 保存密钥</button>
+  <div id="settings-status" style="margin-top:12px;font-size:13px;color:var(--muted);text-align:center"></div>
+</div>
+
 <div class="bottom-nav">
   <button class="nav-item active" onclick="showPage('home', this)">
     <span class="nav-icon">📦</span><span>库存</span>
@@ -553,6 +568,9 @@
   </button>
   <button class="nav-item" onclick="showPage('shopping', this)">
     <span class="nav-icon">🛒</span><span>补货清单</span>
+  </button>
+  <button class="nav-item" onclick="showPage('settings', this)">
+    <span class="nav-icon">⚙️</span><span>设置</span>
   </button>
 </div>
 
@@ -687,8 +705,27 @@ function filterBy(cat, el) {
   renderInventory();
 }
 
+// ===== SETTINGS =====
+function getApiKey() { return localStorage.getItem('gemini_api_key') || ''; }
+
+function saveApiKey() {
+  const key = document.getElementById('settings-apikey').value.trim();
+  if (!key) { showToast('请填入 API 密钥', 'error'); return; }
+  localStorage.setItem('gemini_api_key', key);
+  document.getElementById('settings-status').innerHTML = '<span style="color:var(--accent)">✅ 密钥已保存到本地</span>';
+  showToast('密钥保存成功', 'success');
+}
+
+// Load saved key into settings field on page open
+function initSettings() {
+  const saved = getApiKey();
+  if (saved) {
+    document.getElementById('settings-apikey').value = saved;
+    document.getElementById('settings-status').innerHTML = '<span style="color:var(--accent)">✅ 已有保存的密钥</span>';
+  }
+}
+
 // ===== GEMINI PHOTO RECOGNITION =====
-const GEMINI_API_KEY = 'AIzaSyCZGlxTbwrTSErr6bt-Dyd694Cu9fwCnB8';
 
 async function handlePhoto(event) {
   const file = event.target.files[0];
@@ -708,7 +745,13 @@ async function handlePhoto(event) {
     const base64 = await fileToBase64(file);
     const mimeType = file.type || 'image/jpeg';
 
-    const res = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${GEMINI_API_KEY}`, {
+    const apiKey = getApiKey();
+    if (!apiKey) {
+      document.getElementById("lookup-loading").classList.remove("show");
+      showToast("请先在设置里填入 Gemini API 密钥", "error");
+      return;
+    }
+    const res = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${apiKey}`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
@@ -999,6 +1042,7 @@ function seedDemo() {
 
 seedDemo();
 render();
+initSettings();
 </script>
 </body>
 </html>
