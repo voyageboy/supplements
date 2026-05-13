@@ -778,9 +778,28 @@ Return ONLY the JSON, no markdown, no explanation.`
     });
 
     const data = await res.json();
+    
+    // Show API error if any
+    if (data.error) {
+      document.getElementById('lookup-loading').classList.remove('show');
+      showToast('API错误: ' + (data.error.message || '密钥无效'), 'error');
+      return;
+    }
+
     const text = data?.candidates?.[0]?.content?.parts?.[0]?.text || '';
+    if (!text) {
+      document.getElementById('lookup-loading').classList.remove('show');
+      showToast('AI 未返回结果，请重试', 'error');
+      return;
+    }
     const clean = text.replace(/```json|```/g, '').trim();
-    const parsed = JSON.parse(clean);
+    let parsed;
+    try { parsed = JSON.parse(clean); } catch(pe) {
+      // If not JSON, try to extract name from plain text
+      pendingLookup = { name: text.substring(0, 60), brand: '', spec: '', barcode: '' };
+      showLookupCard(text.substring(0, 60), '', '');
+      return;
+    }
 
     if (parsed.error || !parsed.name) {
       document.getElementById('lookup-loading').classList.remove('show');
@@ -794,7 +813,8 @@ Return ONLY the JSON, no markdown, no explanation.`
 
   } catch(e) {
     document.getElementById('lookup-loading').classList.remove('show');
-    showToast('识别失败，请手动填写', 'info');
+    showToast('错误: ' + (e.message || '请检查网络和密钥'), 'error');
+    console.error('Gemini error:', e);
   }
 
   // Reset input so same file can be selected again
