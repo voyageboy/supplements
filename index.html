@@ -792,12 +792,16 @@ Return ONLY the JSON, no markdown, no explanation.`
       showToast('AI 未返回结果，请重试', 'error');
       return;
     }
-    const clean = text.replace(/```json|```/g, '').trim();
+    // Extract JSON from response - handle cases where it's wrapped in text
     let parsed;
-    try { parsed = JSON.parse(clean); } catch(pe) {
-      // If not JSON, try to extract name from plain text
-      pendingLookup = { name: text.substring(0, 60), brand: '', spec: '', barcode: '' };
-      showLookupCard(text.substring(0, 60), '', '');
+    try {
+      // Try to find JSON object in the response
+      const jsonMatch = text.match(/\{[\s\S]*\}/);
+      const clean = jsonMatch ? jsonMatch[0] : text.replace(/```json|```/g, '').trim();
+      parsed = JSON.parse(clean);
+    } catch(pe) {
+      document.getElementById('lookup-loading').classList.remove('show');
+      showToast('解析失败，请重试', 'error');
       return;
     }
 
