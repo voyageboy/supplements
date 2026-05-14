@@ -4,7 +4,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0">
 <title>补剂库存管理</title>
-<script src="https://unpkg.com/@zxing/library@latest/umd/index.min.js" onerror="window.ZXing=null"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/quagga/0.12.1/quagga.min.js"></script>
 <style>
   @import url('https://fonts.googleapis.com/css2?family=DM+Mono:wght@400;500&family=Sora:wght@300;400;600;700&display=swap');
 
@@ -32,6 +32,7 @@
     padding-bottom: 100px;
   }
 
+  /* Header */
   .header {
     background: var(--surface);
     border-bottom: 1px solid var(--border);
@@ -46,9 +47,16 @@
     align-items: center;
     margin-bottom: 14px;
   }
-  .logo { font-size: 18px; font-weight: 700; letter-spacing: -0.5px; }
+  .logo {
+    font-size: 18px;
+    font-weight: 700;
+    letter-spacing: -0.5px;
+  }
   .logo span { color: var(--accent); }
-  .stats-row { display: flex; gap: 10px; }
+  .stats-row {
+    display: flex;
+    gap: 10px;
+  }
   .stat-chip {
     background: var(--surface2);
     border: 1px solid var(--border);
@@ -59,10 +67,15 @@
     align-items: center;
     gap: 6px;
   }
-  .stat-chip .num { font-family: 'DM Mono', monospace; font-size: 14px; font-weight: 500; }
+  .stat-chip .num {
+    font-family: 'DM Mono', monospace;
+    font-size: 14px;
+    font-weight: 500;
+  }
   .stat-chip.warn .num { color: var(--warn); }
   .stat-chip.ok .num { color: var(--accent); }
 
+  /* Tabs */
   .tabs {
     display: flex;
     gap: 6px;
@@ -82,11 +95,16 @@
     transition: all 0.2s;
     border-bottom: 2px solid transparent;
   }
-  .tab.active { color: var(--accent); border-bottom-color: var(--accent); }
+  .tab.active {
+    color: var(--accent);
+    border-bottom-color: var(--accent);
+  }
 
+  /* Pages */
   .page { display: none; padding: 16px 20px; }
   .page.active { display: block; }
 
+  /* Section title */
   .section-title {
     font-size: 11px;
     font-weight: 600;
@@ -98,6 +116,7 @@
   }
   .section-title:first-child { margin-top: 4px; }
 
+  /* Alert banner */
   .alert-banner {
     background: linear-gradient(135deg, #2a1a0a, #1e1208);
     border: 1px solid var(--warn);
@@ -109,8 +128,10 @@
     gap: 10px;
     font-size: 13px;
   }
+  .alert-banner .icon { font-size: 18px; }
   .alert-banner strong { color: var(--warn); }
 
+  /* Supplement Card */
   .supp-card {
     background: var(--surface);
     border: 1px solid var(--border);
@@ -122,32 +143,89 @@
     gap: 12px;
     transition: border-color 0.2s;
   }
+  .supp-card:active { border-color: var(--accent2); }
   .supp-card.low { border-color: #3a2010; background: linear-gradient(135deg, #1e1610, #16181c); }
   .supp-card.critical { border-color: var(--danger); background: linear-gradient(135deg, #2a1010, #16181c); }
 
   .supp-icon {
-    width: 44px; height: 44px;
+    width: 44px;
+    height: 44px;
     border-radius: 10px;
     background: var(--surface2);
-    display: flex; align-items: center; justify-content: center;
-    font-size: 20px; flex-shrink: 0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 20px;
+    flex-shrink: 0;
   }
+
   .supp-info { flex: 1; min-width: 0; }
-  .supp-name { font-size: 14px; font-weight: 600; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; margin-bottom: 3px; }
-  .supp-meta { font-size: 11px; color: var(--muted); font-family: 'DM Mono', monospace; }
+  .supp-name {
+    font-size: 14px;
+    font-weight: 600;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    margin-bottom: 3px;
+  }
+  .supp-meta {
+    font-size: 11px;
+    color: var(--muted);
+    font-family: 'DM Mono', monospace;
+  }
+
   .supp-right { text-align: right; flex-shrink: 0; }
-  .supp-days { font-family: 'DM Mono', monospace; font-size: 22px; font-weight: 500; line-height: 1; margin-bottom: 2px; }
+  .supp-days {
+    font-family: 'DM Mono', monospace;
+    font-size: 22px;
+    font-weight: 500;
+    line-height: 1;
+    margin-bottom: 2px;
+  }
   .supp-days.ok { color: var(--accent); }
   .supp-days.warn { color: var(--warn); }
   .supp-days.critical { color: var(--danger); }
   .supp-days-label { font-size: 10px; color: var(--muted); }
 
+  /* Progress bar */
   .progress-wrap { margin-top: 8px; }
-  .progress-bar { height: 3px; background: var(--surface2); border-radius: 2px; overflow: hidden; }
-  .progress-fill { height: 100%; border-radius: 2px; transition: width 0.5s ease; }
+  .progress-bar {
+    height: 3px;
+    background: var(--surface2);
+    border-radius: 2px;
+    overflow: hidden;
+  }
+  .progress-fill {
+    height: 100%;
+    border-radius: 2px;
+    transition: width 0.5s ease;
+  }
   .progress-fill.ok { background: var(--accent); }
   .progress-fill.warn { background: var(--warn); }
   .progress-fill.critical { background: var(--danger); }
+
+  /* Quick action buttons */
+  .quick-actions {
+    display: flex;
+    gap: 8px;
+    margin-top: 10px;
+  }
+  .btn-small {
+    flex: 1;
+    padding: 7px;
+    border-radius: 8px;
+    border: 1px solid var(--border);
+    background: var(--surface2);
+    color: var(--text);
+    font-size: 12px;
+    font-weight: 600;
+    cursor: pointer;
+    font-family: 'Sora', sans-serif;
+    transition: all 0.15s;
+  }
+  .btn-small:active { transform: scale(0.96); }
+  .btn-small.plus { border-color: var(--accent); color: var(--accent); }
+  .btn-small.minus { border-color: var(--border); }
 
   /* Scan page */
   .scan-area {
@@ -174,35 +252,9 @@
     transition: all 0.15s;
   }
   .scan-btn:active { transform: scale(0.97); opacity: 0.9; }
-  .scan-hint { font-size: 12px; color: var(--muted); margin-top: 12px; line-height: 1.6; }
+  .scan-hint { font-size: 12px; color: var(--muted); margin-top: 12px; }
 
-  /* Photo recognition */
-  .photo-btn {
-    display: inline-flex;
-    align-items: center;
-    gap: 10px;
-    background: var(--surface2);
-    color: var(--accent2);
-    border: 1px solid var(--accent2);
-    border-radius: 12px;
-    padding: 12px 24px;
-    font-size: 14px;
-    font-weight: 700;
-    font-family: 'Sora', sans-serif;
-    cursor: pointer;
-    transition: all 0.15s;
-    margin-top: 10px;
-  }
-  .photo-btn:active { transform: scale(0.97); opacity: 0.9; }
-  #photo-preview {
-    width: 100%;
-    border-radius: var(--radius);
-    margin-bottom: 12px;
-    display: none;
-    max-height: 200px;
-    object-fit: cover;
-  }
-
+  /* Camera view */
   #scanner-container {
     position: relative;
     border-radius: var(--radius);
@@ -211,89 +263,80 @@
     margin-bottom: 16px;
     display: none;
   }
-  #scanner-container video, #scanner-container canvas { width: 100% !important; height: auto !important; display: block; }
-  .scan-overlay { position: absolute; inset: 0; display: flex; align-items: center; justify-content: center; pointer-events: none; }
-  .scan-frame { width: 240px; height: 120px; border: 2px solid var(--accent); border-radius: 8px; box-shadow: 0 0 0 2000px rgba(0,0,0,0.4); position: relative; overflow: hidden; }
-  .scan-line { position: absolute; width: 100%; height: 2px; background: var(--accent); animation: scanline 2s ease-in-out infinite; top: 0; }
-  @keyframes scanline { 0%, 100% { top: 10%; opacity: 0.8; } 50% { top: 85%; opacity: 1; } }
+  #scanner-container video,
+  #scanner-container canvas {
+    width: 100% !important;
+    height: auto !important;
+    display: block;
+  }
+  .scan-overlay {
+    position: absolute;
+    inset: 0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    pointer-events: none;
+  }
+  .scan-frame {
+    width: 240px;
+    height: 120px;
+    border: 2px solid var(--accent);
+    border-radius: 8px;
+    box-shadow: 0 0 0 2000px rgba(0,0,0,0.4);
+  }
+  .scan-line {
+    position: absolute;
+    width: 236px;
+    height: 2px;
+    background: var(--accent);
+    animation: scanline 2s ease-in-out infinite;
+    top: 50%;
+  }
+  @keyframes scanline {
+    0%, 100% { transform: translateY(-58px); opacity: 0.8; }
+    50% { transform: translateY(58px); opacity: 1; }
+  }
 
   .stop-scan-btn {
-    width: 100%; padding: 12px;
+    width: 100%;
+    padding: 12px;
     background: var(--surface2);
     border: 1px solid var(--border);
     border-radius: 10px;
     color: var(--muted);
-    font-size: 13px; font-weight: 600;
-    cursor: pointer;
-    font-family: 'Sora', sans-serif;
-    margin-bottom: 16px;
-  }
-
-  /* Lookup result card */
-  .lookup-card {
-    background: linear-gradient(135deg, #0e1a0e, #16181c);
-    border: 1px solid var(--accent);
-    border-radius: var(--radius);
-    padding: 16px;
-    margin-bottom: 16px;
-    display: none;
-  }
-  .lookup-card.show { display: block; }
-  .lookup-card-title { font-size: 12px; font-weight: 600; color: var(--accent); letter-spacing: 1px; text-transform: uppercase; margin-bottom: 10px; }
-  .lookup-card-name { font-size: 16px; font-weight: 700; margin-bottom: 4px; }
-  .lookup-card-brand { font-size: 13px; color: var(--muted); margin-bottom: 12px; }
-  .lookup-confirm-btn {
-    width: 100%; padding: 11px;
-    background: var(--accent);
-    color: #0e0f11;
-    border: none; border-radius: 10px;
-    font-size: 14px; font-weight: 700;
-    font-family: 'Sora', sans-serif;
-    cursor: pointer;
-  }
-  .lookup-manual-btn {
-    width: 100%; padding: 11px; margin-top: 8px;
-    background: transparent;
-    color: var(--muted);
-    border: 1px solid var(--border); border-radius: 10px;
-    font-size: 13px; font-weight: 600;
-    font-family: 'Sora', sans-serif;
-    cursor: pointer;
-  }
-
-  /* Loading spinner */
-  .lookup-loading {
-    display: none;
-    align-items: center;
-    gap: 10px;
-    background: var(--surface);
-    border: 1px solid var(--border);
-    border-radius: var(--radius);
-    padding: 16px;
-    margin-bottom: 16px;
     font-size: 13px;
-    color: var(--muted);
+    font-weight: 600;
+    cursor: pointer;
+    font-family: 'Sora', sans-serif;
+    margin-bottom: 16px;
   }
-  .lookup-loading.show { display: flex; }
-  .spinner {
-    width: 18px; height: 18px;
-    border: 2px solid var(--border);
-    border-top-color: var(--accent);
-    border-radius: 50%;
-    animation: spin 0.8s linear infinite;
-    flex-shrink: 0;
-  }
-  @keyframes spin { to { transform: rotate(360deg); } }
 
+  /* Manual input */
   .divider {
-    display: flex; align-items: center; gap: 12px;
+    display: flex;
+    align-items: center;
+    gap: 12px;
     margin: 20px 0;
-    color: var(--muted); font-size: 12px;
+    color: var(--muted);
+    font-size: 12px;
   }
-  .divider::before, .divider::after { content: ''; flex: 1; height: 1px; background: var(--border); }
+  .divider::before, .divider::after {
+    content: '';
+    flex: 1;
+    height: 1px;
+    background: var(--border);
+  }
 
   .input-group { margin-bottom: 12px; }
-  .input-label { font-size: 11px; font-weight: 600; color: var(--muted); letter-spacing: 1px; text-transform: uppercase; margin-bottom: 6px; display: block; }
+  .input-label {
+    font-size: 11px;
+    font-weight: 600;
+    color: var(--muted);
+    letter-spacing: 1px;
+    text-transform: uppercase;
+    margin-bottom: 6px;
+    display: block;
+  }
   input, select {
     width: 100%;
     background: var(--surface);
@@ -308,55 +351,55 @@
     -webkit-appearance: none;
   }
   input:focus, select:focus { border-color: var(--accent2); }
+
   .row-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
 
   .btn-primary {
-    width: 100%; padding: 14px;
+    width: 100%;
+    padding: 14px;
     background: var(--accent);
     color: #0e0f11;
-    border: none; border-radius: 12px;
-    font-size: 15px; font-weight: 700;
+    border: none;
+    border-radius: 12px;
+    font-size: 15px;
+    font-weight: 700;
     font-family: 'Sora', sans-serif;
-    cursor: pointer; margin-top: 8px;
+    cursor: pointer;
+    margin-top: 8px;
     transition: all 0.15s;
   }
   .btn-primary:active { transform: scale(0.98); opacity: 0.9; }
 
-  .btn-small {
-    flex: 1; padding: 7px;
-    border-radius: 8px;
-    border: 1px solid var(--border);
-    background: var(--surface2);
-    color: var(--text);
-    font-size: 12px; font-weight: 600;
-    cursor: pointer;
-    font-family: 'Sora', sans-serif;
-    transition: all 0.15s;
-  }
-  .btn-small:active { transform: scale(0.96); }
-  .btn-small.plus { border-color: var(--accent); color: var(--accent); }
-
+  /* Toast */
   .toast {
     position: fixed;
-    bottom: 90px; left: 50%;
+    bottom: 90px;
+    left: 50%;
     transform: translateX(-50%) translateY(20px);
     background: var(--surface2);
     border: 1px solid var(--border);
     border-radius: 10px;
     padding: 12px 20px;
-    font-size: 13px; font-weight: 600;
+    font-size: 13px;
+    font-weight: 600;
     opacity: 0;
     transition: all 0.3s;
     z-index: 999;
     white-space: nowrap;
   }
-  .toast.show { opacity: 1; transform: translateX(-50%) translateY(0); }
+  .toast.show {
+    opacity: 1;
+    transform: translateX(-50%) translateY(0);
+  }
   .toast.success { border-color: var(--accent); color: var(--accent); }
   .toast.error { border-color: var(--danger); color: var(--danger); }
-  .toast.info { border-color: var(--accent2); color: var(--accent2); }
 
+  /* Bottom nav */
   .bottom-nav {
-    position: fixed; bottom: 0; left: 0; right: 0;
+    position: fixed;
+    bottom: 0;
+    left: 0;
+    right: 0;
     background: var(--surface);
     border-top: 1px solid var(--border);
     display: flex;
@@ -364,49 +407,129 @@
     z-index: 100;
   }
   .nav-item {
-    flex: 1; display: flex; flex-direction: column; align-items: center; gap: 4px;
-    cursor: pointer; padding: 4px 0;
-    border: none; background: transparent;
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 4px;
+    cursor: pointer;
+    padding: 4px 0;
+    border: none;
+    background: transparent;
     color: var(--muted);
-    font-family: 'Sora', sans-serif; font-size: 10px; font-weight: 600;
+    font-family: 'Sora', sans-serif;
+    font-size: 10px;
+    font-weight: 600;
     transition: color 0.2s;
   }
   .nav-item .nav-icon { font-size: 22px; line-height: 1; }
   .nav-item.active { color: var(--accent); }
 
+  /* Modal */
   .modal-overlay {
-    position: fixed; inset: 0;
+    position: fixed;
+    inset: 0;
     background: rgba(0,0,0,0.7);
-    z-index: 200; display: none;
-    align-items: flex-end; justify-content: center;
+    z-index: 200;
+    display: none;
+    align-items: flex-end;
+    justify-content: center;
   }
   .modal-overlay.show { display: flex; }
   .modal {
     background: var(--surface);
     border-radius: 20px 20px 0 0;
     padding: 24px 20px 40px;
-    width: 100%; max-width: 480px;
+    width: 100%;
+    max-width: 480px;
     border-top: 1px solid var(--border);
   }
-  .modal-title { font-size: 16px; font-weight: 700; margin-bottom: 6px; }
-  .modal-sub { font-size: 12px; color: var(--muted); margin-bottom: 20px; font-family: 'DM Mono', monospace; }
+  .modal-title {
+    font-size: 16px;
+    font-weight: 700;
+    margin-bottom: 6px;
+  }
+  .modal-sub {
+    font-size: 12px;
+    color: var(--muted);
+    margin-bottom: 20px;
+    font-family: 'DM Mono', monospace;
+  }
   .modal-actions { display: flex; gap: 10px; margin-top: 16px; }
-  .btn-cancel { flex: 1; padding: 12px; background: var(--surface2); border: 1px solid var(--border); border-radius: 10px; color: var(--muted); font-size: 14px; font-weight: 600; cursor: pointer; font-family: 'Sora', sans-serif; }
-  .btn-confirm { flex: 2; padding: 12px; background: var(--accent); border: none; border-radius: 10px; color: #0e0f11; font-size: 14px; font-weight: 700; cursor: pointer; font-family: 'Sora', sans-serif; }
+  .btn-cancel {
+    flex: 1;
+    padding: 12px;
+    background: var(--surface2);
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    color: var(--muted);
+    font-size: 14px;
+    font-weight: 600;
+    cursor: pointer;
+    font-family: 'Sora', sans-serif;
+  }
+  .btn-confirm {
+    flex: 2;
+    padding: 12px;
+    background: var(--accent);
+    border: none;
+    border-radius: 10px;
+    color: #0e0f11;
+    font-size: 14px;
+    font-weight: 700;
+    cursor: pointer;
+    font-family: 'Sora', sans-serif;
+  }
 
-  .detail-row { display: flex; justify-content: space-between; align-items: center; padding: 10px 0; border-bottom: 1px solid var(--border); font-size: 13px; }
+  /* Detail modal */
+  .detail-row {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 10px 0;
+    border-bottom: 1px solid var(--border);
+    font-size: 13px;
+  }
   .detail-row:last-child { border-bottom: none; }
   .detail-key { color: var(--muted); }
   .detail-val { font-family: 'DM Mono', monospace; font-weight: 500; }
 
-  .empty-state { text-align: center; padding: 60px 20px; color: var(--muted); }
+  .empty-state {
+    text-align: center;
+    padding: 60px 20px;
+    color: var(--muted);
+  }
   .empty-state .emoji { font-size: 48px; margin-bottom: 16px; }
   .empty-state p { font-size: 14px; line-height: 1.6; }
 
-  .filter-row { display: flex; gap: 8px; overflow-x: auto; padding-bottom: 4px; margin-bottom: 14px; scrollbar-width: none; }
+  /* Category filter */
+  .filter-row {
+    display: flex;
+    gap: 8px;
+    overflow-x: auto;
+    padding-bottom: 4px;
+    margin-bottom: 14px;
+    scrollbar-width: none;
+  }
   .filter-row::-webkit-scrollbar { display: none; }
-  .filter-chip { flex-shrink: 0; padding: 6px 14px; border-radius: 20px; border: 1px solid var(--border); background: var(--surface2); color: var(--muted); font-size: 12px; font-weight: 600; cursor: pointer; transition: all 0.15s; white-space: nowrap; }
-  .filter-chip.active { background: var(--accent); color: #0e0f11; border-color: var(--accent); }
+  .filter-chip {
+    flex-shrink: 0;
+    padding: 6px 14px;
+    border-radius: 20px;
+    border: 1px solid var(--border);
+    background: var(--surface2);
+    color: var(--muted);
+    font-size: 12px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.15s;
+    white-space: nowrap;
+  }
+  .filter-chip.active {
+    background: var(--accent);
+    color: #0e0f11;
+    border-color: var(--accent);
+  }
 
   select option { background: var(--surface2); }
 </style>
@@ -417,14 +540,22 @@
   <div class="header-top">
     <div class="logo">补剂<span>库存</span></div>
     <div style="display:flex;gap:8px">
-      <div class="stat-chip ok"><span>总计</span><span class="num" id="total-count">0</span></div>
-      <div class="stat-chip warn"><span>⚠️ 预警</span><span class="num" id="warn-count">0</span></div>
+      <div class="stat-chip ok">
+        <span>总计</span>
+        <span class="num" id="total-count">0</span>
+      </div>
+      <div class="stat-chip warn">
+        <span>⚠️ 预警</span>
+        <span class="num" id="warn-count">0</span>
+      </div>
     </div>
   </div>
 </div>
 
+<!-- Pages -->
 <div class="page active" id="page-home">
   <div id="alert-section"></div>
+
   <div class="filter-row">
     <div class="filter-chip active" onclick="filterBy('全部', this)">全部</div>
     <div class="filter-chip" onclick="filterBy('甲基化', this)">甲基化</div>
@@ -434,75 +565,29 @@
     <div class="filter-chip" onclick="filterBy('矿物质', this)">矿物质</div>
     <div class="filter-chip" onclick="filterBy('其他', this)">其他</div>
   </div>
+
   <div id="inventory-list"></div>
 </div>
 
 <div class="page" id="page-scan">
+  <div class="section-title">扫描入库</div>
 
-  <!-- Barcode scan -->
-  <div class="section-title">扫码入库</div>
   <div class="scan-area" id="scan-area">
-    <div style="font-size:40px;margin-bottom:12px">📷</div>
-    <button class="scan-btn" onclick="startScan()">扫描条形码</button>
-    <div class="scan-hint">已录入的补剂扫码即可直接入库<br>新产品扫码后请填写信息并绑定</div>
+    <div style="font-size:48px;margin-bottom:16px">📷</div>
+    <button class="scan-btn" onclick="startScan()">
+      <span>扫描条形码</span>
+    </button>
+    <div class="scan-hint">支持大多数海外补剂包装条形码<br>扫描后自动识别产品名称</div>
   </div>
+
   <div id="scanner-container">
     <div class="scan-overlay">
-      <div class="scan-frame"><div class="scan-line"></div></div>
+      <div class="scan-frame">
+        <div class="scan-line"></div>
+      </div>
     </div>
   </div>
   <button class="stop-scan-btn" id="stop-btn" style="display:none" onclick="stopScan()">停止扫描</button>
-
-  <!-- Smart paste section -->
-  <div class="section-title" style="margin-top:20px">粘贴 iHerb 文字识别</div>
-  <div style="background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);padding:12px 14px;margin-bottom:12px;font-size:12px;color:var(--muted);line-height:1.7">
-    从 iHerb 复制产品标题粘贴到下方，自动填入信息。
-  </div>
-  <div class="input-group">
-    <label class="input-label">粘贴产品信息</label>
-    <textarea id="paste-input" placeholder="例：Nutricost, TUDCA, Tauroursodeoxycholic Acid, 500 mg, 50 Servings" style="width:100%;background:var(--surface);border:1px solid var(--border);border-radius:10px;padding:11px 14px;color:var(--text);font-size:13px;font-family:'Sora',sans-serif;outline:none;resize:none;height:80px;line-height:1.6;-webkit-appearance:none"></textarea>
-  </div>
-  <button class="scan-btn" style="width:100%;justify-content:center;margin-bottom:16px" onclick="smartParse()">✨ 智能识别</button>
-
-  <!-- Loading -->
-  <div class="lookup-loading" id="lookup-loading">
-    <div class="spinner"></div>
-    <span>正在识别…</span>
-  </div>
-
-  <!-- Result card -->
-  <div class="lookup-card" id="lookup-card">
-    <div class="lookup-card-title">✅ 识别成功</div>
-    <div class="lookup-card-name" id="lc-name"></div>
-    <div class="lookup-card-brand" id="lc-brand"></div>
-    <div class="input-group" style="margin-top:10px">
-      <label class="input-label">绑定条形码（可选，下次扫码直接入库）</label>
-      <input type="text" id="lc-barcode" placeholder="扫描包装条形码或手动输入" />
-    </div>
-    <div class="row-2" style="margin-bottom:12px">
-      <div class="input-group" style="margin:0">
-        <label class="input-label">库存数量</label>
-        <input type="number" id="lc-stock" placeholder="粒/片/ml" min="0" />
-      </div>
-      <div class="input-group" style="margin:0">
-        <label class="input-label">每日用量</label>
-        <input type="number" id="lc-daily" value="1" min="1" />
-      </div>
-    </div>
-    <div class="input-group">
-      <label class="input-label">分类</label>
-      <select id="lc-category">
-        <option value="甲基化">甲基化</option>
-        <option value="线粒体">线粒体</option>
-        <option value="抗氧化">抗氧化</option>
-        <option value="肠道">肠道</option>
-        <option value="矿物质">矿物质</option>
-        <option value="其他" selected>其他</option>
-      </select>
-    </div>
-    <button class="lookup-confirm-btn" onclick="confirmLookup()">➕ 确认入库</button>
-    <button class="lookup-manual-btn" onclick="cancelLookup()">手动修改信息</button>
-  </div>
 
   <div class="divider">或手动输入</div>
 
@@ -527,7 +612,7 @@
   </div>
   <div class="row-2">
     <div class="input-group">
-      <label class="input-label">库存数量</label>
+      <label class="input-label">当前库存（粒/片/ml）</label>
       <input type="number" id="add-stock" placeholder="例：120" min="0" />
     </div>
     <div class="input-group">
@@ -536,8 +621,8 @@
     </div>
   </div>
   <div class="input-group">
-    <label class="input-label">预警天数</label>
-    <input type="number" id="add-threshold" value="14" min="1" />
+    <label class="input-label">预警天数（库存低于几天时提醒）</label>
+    <input type="number" id="add-threshold" placeholder="例：14" value="14" min="1" />
   </div>
   <div class="input-group">
     <label class="input-label">规格备注</label>
@@ -551,36 +636,19 @@
   <div id="shopping-list"></div>
 </div>
 
-<div class="page" id="page-settings">
-  <div class="section-title">关于</div>
-  <div style="background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);padding:16px;margin-bottom:16px;font-size:13px;color:var(--muted);line-height:1.8">
-    <div style="font-size:15px;font-weight:700;color:var(--text);margin-bottom:8px">补剂库存管理</div>
-    数据保存在本地浏览器，不上传任何服务器。<br>
-    智能识别功能使用 Claude AI 解析产品信息。<br><br>
-    <span style="color:var(--accent)">💡 使用技巧</span><br>
-    在 iHerb 产品页，复制产品标题或完整描述，粘贴到「入库」页面的智能识别框，即可自动填入所有信息。
-  </div>
-  <div class="section-title">预警天数默认值</div>
-  <div class="input-group">
-    <label class="input-label">低库存预警（天）</label>
-    <input type="number" id="settings-threshold" value="14" min="1" />
-  </div>
-  <button class="btn-primary" onclick="saveSettings()">💾 保存设置</button>
-  <div id="settings-status" style="margin-top:12px;font-size:13px;color:var(--muted);text-align:center"></div>
-</div>
-
+<!-- Bottom Nav -->
 <div class="bottom-nav">
   <button class="nav-item active" onclick="showPage('home', this)">
-    <span class="nav-icon">📦</span><span>库存</span>
+    <span class="nav-icon">📦</span>
+    <span>库存</span>
   </button>
   <button class="nav-item" onclick="showPage('scan', this)">
-    <span class="nav-icon">➕</span><span>入库</span>
+    <span class="nav-icon">➕</span>
+    <span>入库</span>
   </button>
   <button class="nav-item" onclick="showPage('shopping', this)">
-    <span class="nav-icon">🛒</span><span>补货清单</span>
-  </button>
-  <button class="nav-item" onclick="showPage('settings', this)">
-    <span class="nav-icon">⚙️</span><span>设置</span>
+    <span class="nav-icon">🛒</span>
+    <span>补货清单</span>
   </button>
 </div>
 
@@ -597,7 +665,7 @@
       </div>
       <div style="display:flex;flex-direction:column;gap:8px;justify-content:flex-end">
         <button class="btn-small plus" onclick="adjustStock(1)">+ 入库</button>
-        <button class="btn-small" onclick="adjustStock(-1)">− 出库</button>
+        <button class="btn-small minus" onclick="adjustStock(-1)">− 出库</button>
       </div>
     </div>
     <div class="modal-actions">
@@ -610,14 +678,23 @@
 <div class="toast" id="toast"></div>
 
 <script>
+// ===== DATA =====
 let inventory = JSON.parse(localStorage.getItem('supp_inventory') || '[]');
 let currentFilter = '全部';
 let activeItemId = null;
-let pendingLookup = null;
 
-const CATEGORY_ICONS = { '甲基化':'🧬', '线粒体':'⚡', '抗氧化':'🛡️', '肠道':'🌿', '矿物质':'💎', '其他':'💊' };
+const CATEGORY_ICONS = {
+  '甲基化': '🧬',
+  '线粒体': '⚡',
+  '抗氧化': '🛡️',
+  '肠道': '🌿',
+  '矿物质': '💎',
+  '其他': '💊'
+};
 
-function save() { localStorage.setItem('supp_inventory', JSON.stringify(inventory)); }
+function save() {
+  localStorage.setItem('supp_inventory', JSON.stringify(inventory));
+}
 
 function getDaysLeft(item) {
   if (!item.daily || item.daily === 0) return 999;
@@ -632,35 +709,59 @@ function getStatus(item) {
   return 'ok';
 }
 
-function render() { renderInventory(); renderAlerts(); renderShopping(); updateStats(); }
+// ===== RENDER =====
+function render() {
+  renderInventory();
+  renderAlerts();
+  renderShopping();
+  updateStats();
+}
 
 function updateStats() {
   document.getElementById('total-count').textContent = inventory.length;
-  document.getElementById('warn-count').textContent = inventory.filter(i => getStatus(i) !== 'ok').length;
+  const warnCount = inventory.filter(i => getStatus(i) !== 'ok').length;
+  document.getElementById('warn-count').textContent = warnCount;
 }
 
 function renderInventory() {
   const list = document.getElementById('inventory-list');
   let items = currentFilter === '全部' ? inventory : inventory.filter(i => i.category === currentFilter);
+
   if (items.length === 0) {
-    list.innerHTML = `<div class="empty-state"><div class="emoji">${currentFilter === '全部' ? '📦' : CATEGORY_ICONS[currentFilter]||'💊'}</div><p>${currentFilter === '全部' ? '还没有添加任何补剂<br>点击下方 ➕ 开始入库' : '这个分类暂无补剂'}</p></div>`;
+    list.innerHTML = `<div class="empty-state">
+      <div class="emoji">${currentFilter === '全部' ? '📦' : CATEGORY_ICONS[currentFilter] || '💊'}</div>
+      <p>${currentFilter === '全部' ? '还没有添加任何补剂<br>点击下方 ➕ 开始入库' : '这个分类暂无补剂'}</p>
+    </div>`;
     return;
   }
-  items = [...items].sort((a,b) => { const o={critical:0,warn:1,ok:2}; return o[getStatus(a)]-o[getStatus(b)]; });
+
+  // Sort: critical first, then warn, then ok
+  items = [...items].sort((a,b) => {
+    const order = {critical:0, warn:1, ok:2};
+    return order[getStatus(a)] - order[getStatus(b)];
+  });
+
   list.innerHTML = items.map(item => {
-    const days = getDaysLeft(item), status = getStatus(item);
+    const days = getDaysLeft(item);
+    const status = getStatus(item);
     const threshold = item.threshold || 14;
-    const fillPct = Math.min(100, Math.round((days / Math.max(threshold*3, 30)) * 100));
+    const fillPct = Math.min(100, Math.round((days / Math.max(threshold * 3, 30)) * 100));
+    const daysText = days >= 999 ? '∞' : days;
     const icon = CATEGORY_ICONS[item.category] || '💊';
+
     return `<div class="supp-card ${status}" onclick="openDetail('${item.id}')">
       <div class="supp-icon">${icon}</div>
       <div class="supp-info">
         <div class="supp-name">${item.name}</div>
-        <div class="supp-meta">${item.brand||'—'} · ${item.stock} 剩余 · ${item.daily}/天</div>
-        <div class="progress-wrap"><div class="progress-bar"><div class="progress-fill ${status}" style="width:${fillPct}%"></div></div></div>
+        <div class="supp-meta">${item.brand || '—'} · ${item.stock} 剩余 · ${item.daily}/天</div>
+        <div class="progress-wrap">
+          <div class="progress-bar">
+            <div class="progress-fill ${status}" style="width:${fillPct}%"></div>
+          </div>
+        </div>
       </div>
       <div class="supp-right">
-        <div class="supp-days ${status}">${days>=999?'∞':days}</div>
+        <div class="supp-days ${status}">${daysText}</div>
         <div class="supp-days-label">天</div>
       </div>
     </div>`;
@@ -670,26 +771,37 @@ function renderInventory() {
 function renderAlerts() {
   const alerts = inventory.filter(i => getStatus(i) !== 'ok');
   const section = document.getElementById('alert-section');
-  section.innerHTML = alerts.length === 0 ? '' : `<div class="alert-banner"><span>⚠️</span><span>有 <strong>${alerts.length} 种</strong>补剂库存不足，请查看补货清单</span></div>`;
+  if (alerts.length === 0) { section.innerHTML = ''; return; }
+  section.innerHTML = `<div class="alert-banner">
+    <span class="icon">⚠️</span>
+    <span>有 <strong>${alerts.length} 种</strong>补剂库存不足，请查看补货清单</span>
+  </div>`;
 }
 
 function renderShopping() {
   const list = document.getElementById('shopping-list');
-  const items = inventory.filter(i => getStatus(i) !== 'ok').sort((a,b) => getDaysLeft(a)-getDaysLeft(b));
+  const items = inventory.filter(i => getStatus(i) !== 'ok')
+    .sort((a,b) => getDaysLeft(a) - getDaysLeft(b));
+
   if (items.length === 0) {
-    list.innerHTML = `<div class="empty-state"><div class="emoji">✅</div><p>所有补剂库存充足<br>暂不需要补货</p></div>`;
+    list.innerHTML = `<div class="empty-state">
+      <div class="emoji">✅</div>
+      <p>所有补剂库存充足<br>暂不需要补货</p>
+    </div>`;
     return;
   }
+
   list.innerHTML = items.map(item => {
-    const days = getDaysLeft(item), status = getStatus(item);
+    const days = getDaysLeft(item);
+    const status = getStatus(item);
     const icon = CATEGORY_ICONS[item.category] || '💊';
     return `<div class="supp-card ${status}" onclick="openDetail('${item.id}')">
       <div class="supp-icon">${icon}</div>
       <div class="supp-info">
         <div class="supp-name">${item.name}</div>
-        <div class="supp-meta">${item.brand||'—'} · ${item.spec||''}</div>
+        <div class="supp-meta">${item.brand || '—'} · ${item.spec || ''}</div>
         <div class="supp-meta" style="margin-top:2px;color:${status==='critical'?'var(--danger)':'var(--warn)'}">
-          ${status==='critical'?'🚨 紧急':'⚠️ 即将用完'} · 仅剩 ${days} 天
+          ${status === 'critical' ? '🚨 紧急' : '⚠️ 即将用完'} · 仅剩 ${days} 天
         </div>
       </div>
       <div class="supp-right">
@@ -700,10 +812,11 @@ function renderShopping() {
   }).join('');
 }
 
+// ===== NAVIGATION =====
 function showPage(name, el) {
   document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
   document.querySelectorAll('.nav-item').forEach(n => n.classList.remove('active'));
-  document.getElementById('page-'+name).classList.add('active');
+  document.getElementById('page-' + name).classList.add('active');
   el.classList.add('active');
   if (name !== 'scan') stopScan();
 }
@@ -715,146 +828,12 @@ function filterBy(cat, el) {
   renderInventory();
 }
 
-// ===== SETTINGS =====
-function saveSettings() {
-  const t = parseInt(document.getElementById('settings-threshold').value) || 14;
-  localStorage.setItem('default_threshold', t);
-  document.getElementById('settings-status').innerHTML = '<span style="color:var(--accent)">✅ 已保存</span>';
-  showToast('设置已保存', 'success');
-}
-
-function initSettings() {
-  const t = localStorage.getItem('default_threshold') || 14;
-  document.getElementById('settings-threshold').value = t;
-}
-
-// ===== SMART PASTE (local rule-based parser) =====
-// Barcode → item ID map stored in localStorage
-function getBarcodeMap() { return JSON.parse(localStorage.getItem('barcode_map') || '{}'); }
-function saveBarcodeMap(map) { localStorage.setItem('barcode_map', JSON.stringify(map)); }
-
-function smartParse() {
-  const text = document.getElementById('paste-input').value.trim();
-  if (!text) { showToast('请先粘贴产品信息', 'error'); return; }
-
-  // iHerb format: "Brand, Product Name, Subtitle, Dose, Count"
-  // Split by comma and clean up
-  const parts = text.split(',').map(s => s.trim()).filter(Boolean);
-
-  let brand = '', name = '', spec = '', category = '其他';
-
-  if (parts.length >= 2) {
-    brand = parts[0];
-    // Name is usually parts[1], sometimes [1]+[2] if subtitle adds context
-    name = parts[1];
-    // Look for dosage pattern: number + mg/mcg/g/IU
-    const doseMatch = text.match(/(\d+[\.,]?\d*\s*(?:mg|mcg|g|IU|ml|%))/i);
-    // Look for count: number + Servings/Capsules/Tablets/Softgels/Count
-    const countMatch = text.match(/(\d+)\s*(?:Servings|Capsules?|Tablets?|Softgels?|Veggie Caps?|Count|ct\.?)/i);
-    if (doseMatch && countMatch) {
-      spec = doseMatch[1].trim() + ' × ' + countMatch[0].trim();
-    } else if (doseMatch) {
-      spec = doseMatch[1].trim();
-    } else if (countMatch) {
-      spec = countMatch[0].trim();
-    }
-  } else {
-    // Single word or non-comma format — use as name
-    name = text.length > 60 ? text.substring(0, 60) : text;
-  }
-
-  // Auto-categorize based on keywords
-  const lower = text.toLowerCase();
-  if (/nmn|nad\+|nad |coq10|coenzyme|ubiquinol|pqq|urolithin|mito/.test(lower)) category = '线粒体';
-  else if (/tmg|methylfolate|methyl|b12|folate|homocysteine|betaine/.test(lower)) category = '甲基化';
-  else if (/vitamin c|resveratrol|quercetin|glutathione|nac|astaxanthin|antioxid/.test(lower)) category = '抗氧化';
-  else if (/probiotic|prebiotic|butyrate|tributyrin|digestive|fiber|gut/.test(lower)) category = '肠道';
-  else if (/magnesium|zinc|copper|boron|iron|calcium|selenium|mineral|electrolyte/.test(lower)) category = '矿物质';
-
-  if (!name) { showToast('无法识别，请手动填写', 'info'); return; }
-
-  pendingLookup = { name, brand, spec, barcode: '' };
-  document.getElementById('lc-category').value = category;
-  showLookupCard(name, brand, spec);
-  document.getElementById('paste-input').value = '';
-}
-
-// ===== SCAN =====
-let scanning = false;
-let codeReader = null;
-async function startScan() {
-  if (!window.ZXing) { showToast('扫码库加载失败，请刷新重试', 'error'); return; }
-  const container = document.getElementById('scanner-container');
-  container.style.display = 'block';
-  document.getElementById('stop-btn').style.display = 'block';
-  document.getElementById('scan-area').style.display = 'none';
-  scanning = true;
-
-  try {
-    codeReader = new ZXing.BrowserMultiFormatReader();
-    const videoEl = document.createElement('video');
-    videoEl.style.width = '100%';
-    container.insertBefore(videoEl, container.firstChild);
-
-    await codeReader.decodeFromConstraints(
-      { video: { facingMode: 'environment' } },
-      videoEl,
-      (result, err) => {
-        if (result) {
-          const code = result.getText();
-          stopScan();
-          handleBarcodeScan(code);
-        }
-      }
-    );
-  } catch(e) {
-    showToast('无法访问摄像头', 'error');
-    stopScan();
-  }
-}
-
-function stopScan() {
-  if (!scanning) return;
-  scanning = false;
-  try { if (codeReader) { codeReader.reset(); codeReader = null; } } catch(e) {}
-  const container = document.getElementById('scanner-container');
-  // Remove video element
-  const video = container.querySelector('video');
-  if (video) video.remove();
-  container.style.display = 'none';
-  document.getElementById('stop-btn').style.display = 'none';
-  document.getElementById('scan-area').style.display = 'block';
-}
-
-function handleBarcodeScan(code) {
-  const map = getBarcodeMap();
-  const itemId = map[code];
-
-  if (itemId) {
-    // Known barcode — find item and do quick restock
-    const item = inventory.find(i => i.id === itemId);
-    if (item) {
-      showToast('📷 识别到：' + item.name, 'success');
-      // Open detail modal for quick stock adjustment
-      openDetail(itemId);
-      showPage('home', document.querySelector('.nav-item'));
-      return;
-    }
-  }
-
-  // Unknown barcode — prefill barcode field and let user add info
-  showToast('新产品，请填写信息', 'info');
-  document.getElementById('lc-barcode').value = code;
-  document.getElementById('lookup-card').classList.add('show');
-  document.getElementById('lc-name').textContent = '未知产品 · 条形码 ' + code;
-  document.getElementById('lc-brand').textContent = '请填写下方信息或粘贴 iHerb 文字识别';
-  pendingLookup = { name: '', brand: '', spec: '', barcode: code };
-}
-
-// ===== MANUAL ADD =====
+// ===== ADD =====
 function addSupplement() {
   const name = document.getElementById('add-name').value.trim();
   const stock = parseInt(document.getElementById('add-stock').value);
+  const daily = parseInt(document.getElementById('add-daily').value) || 1;
+
   if (!name) { showToast('请填写补剂名称', 'error'); return; }
   if (isNaN(stock) || stock < 0) { showToast('请填写有效库存数量', 'error'); return; }
 
@@ -864,7 +843,7 @@ function addSupplement() {
     brand: document.getElementById('add-brand').value.trim(),
     category: document.getElementById('add-category').value,
     stock,
-    daily: parseInt(document.getElementById('add-daily').value) || 1,
+    daily,
     threshold: parseInt(document.getElementById('add-threshold').value) || 14,
     spec: document.getElementById('add-spec').value.trim(),
     addedAt: new Date().toLocaleDateString('zh-CN')
@@ -873,14 +852,99 @@ function addSupplement() {
   inventory.push(item);
   save();
   render();
+
+  // Reset form
   ['add-name','add-brand','add-stock','add-spec'].forEach(id => document.getElementById(id).value = '');
   document.getElementById('add-daily').value = '1';
   document.getElementById('add-threshold').value = '14';
+
   showToast(`✅ ${name} 已入库`, 'success');
   showPage('home', document.querySelector('.nav-item'));
 }
 
+// ===== DETAIL MODAL =====
+function openDetail(id) {
+  activeItemId = id;
+  const item = inventory.find(i => i.id === id);
+  if (!item) return;
 
+  const days = getDaysLeft(item);
+  document.getElementById('modal-name').textContent = item.name;
+  document.getElementById('modal-sub').textContent = `${item.brand || '未知品牌'} · ${item.category}`;
+  document.getElementById('modal-details').innerHTML = `
+    <div class="detail-row"><span class="detail-key">当前库存</span><span class="detail-val">${item.stock} 粒/片/ml</span></div>
+    <div class="detail-row"><span class="detail-key">每日用量</span><span class="detail-val">${item.daily} /天</span></div>
+    <div class="detail-row"><span class="detail-key">预计还剩</span><span class="detail-val" style="color:var(--${getStatus(item)==='ok'?'accent':getStatus(item)==='warn'?'warn':'danger'})">${days >= 999 ? '充足' : days + ' 天'}</span></div>
+    <div class="detail-row"><span class="detail-key">预警天数</span><span class="detail-val">${item.threshold} 天</span></div>
+    ${item.spec ? `<div class="detail-row"><span class="detail-key">规格</span><span class="detail-val">${item.spec}</span></div>` : ''}
+    <div class="detail-row"><span class="detail-key">入库时间</span><span class="detail-val">${item.addedAt}</span></div>
+  `;
+  document.getElementById('modal-adjust').value = '';
+  document.getElementById('detail-modal').classList.add('show');
+}
+
+function closeModal() {
+  document.getElementById('detail-modal').classList.remove('show');
+  activeItemId = null;
+}
+
+function adjustStock(direction) {
+  const amount = parseInt(document.getElementById('modal-adjust').value);
+  if (isNaN(amount) || amount <= 0) { showToast('请输入有效数量', 'error'); return; }
+
+  const item = inventory.find(i => i.id === activeItemId);
+  if (!item) return;
+
+  item.stock = Math.max(0, item.stock + direction * amount);
+  save();
+  render();
+  closeModal();
+  showToast(`${direction > 0 ? '✅ 入库' : '📤 出库'} ${amount}，${item.name} 剩余 ${item.stock}`, 'success');
+}
+
+function deleteItem() {
+  const item = inventory.find(i => i.id === activeItemId);
+  if (!item) return;
+  if (!confirm(`确定删除「${item.name}」吗？`)) return;
+  inventory = inventory.filter(i => i.id !== activeItemId);
+  save();
+  render();
+  closeModal();
+  showToast(`已删除 ${item.name}`, 'error');
+}
+
+// ===== SCAN =====
+let scanning = false;
+function startScan() {
+  const container = document.getElementById('scanner-container');
+  container.style.display = 'block';
+  document.getElementById('stop-btn').style.display = 'block';
+  document.getElementById('scan-area').style.display = 'none';
+  scanning = true;
+
+  Quagga.init({
+    inputStream: {
+      name: 'Live',
+      type: 'LiveStream',
+      target: container,
+      constraints: { facingMode: 'environment', width: { min: 640 }, height: { min: 360 } }
+    },
+    decoder: { readers: ['ean_reader', 'upc_reader', 'ean_8_reader', 'code_128_reader', 'code_39_reader'] },
+    locate: true
+  }, err => {
+    if (err) { showToast('无法访问摄像头', 'error'); stopScan(); return; }
+    Quagga.start();
+  });
+
+  Quagga.onDetected(result => {
+    const code = result.codeResult.code;
+    stopScan();
+    document.getElementById('add-spec').value = `条形码: ${code}`;
+    showToast(`📷 已识别条形码: ${code}`, 'success');
+    // Pre-fill name field for user to complete
+    document.getElementById('add-name').focus();
+  });
+}
 
 function stopScan() {
   if (!scanning) return;
@@ -891,46 +955,7 @@ function stopScan() {
   document.getElementById('scan-area').style.display = 'block';
 }
 
-// ===== DETAIL MODAL =====
-function openDetail(id) {
-  activeItemId = id;
-  const item = inventory.find(i => i.id === id);
-  if (!item) return;
-  const days = getDaysLeft(item);
-  document.getElementById('modal-name').textContent = item.name;
-  document.getElementById('modal-sub').textContent = `${item.brand||'未知品牌'} · ${item.category}`;
-  document.getElementById('modal-details').innerHTML = `
-    <div class="detail-row"><span class="detail-key">当前库存</span><span class="detail-val">${item.stock} 粒/片/ml</span></div>
-    <div class="detail-row"><span class="detail-key">每日用量</span><span class="detail-val">${item.daily} /天</span></div>
-    <div class="detail-row"><span class="detail-key">预计还剩</span><span class="detail-val" style="color:var(--${getStatus(item)==='ok'?'accent':getStatus(item)==='warn'?'warn':'danger'})">${days>=999?'充足':days+' 天'}</span></div>
-    <div class="detail-row"><span class="detail-key">预警天数</span><span class="detail-val">${item.threshold} 天</span></div>
-    ${item.spec?`<div class="detail-row"><span class="detail-key">规格</span><span class="detail-val">${item.spec}</span></div>`:''}
-    <div class="detail-row"><span class="detail-key">入库时间</span><span class="detail-val">${item.addedAt}</span></div>
-  `;
-  document.getElementById('modal-adjust').value = '';
-  document.getElementById('detail-modal').classList.add('show');
-}
-
-function closeModal() { document.getElementById('detail-modal').classList.remove('show'); activeItemId = null; }
-
-function adjustStock(direction) {
-  const amount = parseInt(document.getElementById('modal-adjust').value);
-  if (isNaN(amount) || amount <= 0) { showToast('请输入有效数量', 'error'); return; }
-  const item = inventory.find(i => i.id === activeItemId);
-  if (!item) return;
-  item.stock = Math.max(0, item.stock + direction * amount);
-  save(); render(); closeModal();
-  showToast(`${direction>0?'✅ 入库':'📤 出库'} ${amount}，${item.name} 剩余 ${item.stock}`, 'success');
-}
-
-function deleteItem() {
-  const item = inventory.find(i => i.id === activeItemId);
-  if (!item || !confirm(`确定删除「${item.name}」吗？`)) return;
-  inventory = inventory.filter(i => i.id !== activeItemId);
-  save(); render(); closeModal();
-  showToast(`已删除 ${item.name}`, 'error');
-}
-
+// ===== TOAST =====
 function showToast(msg, type='success') {
   const t = document.getElementById('toast');
   t.textContent = msg;
@@ -938,23 +963,23 @@ function showToast(msg, type='success') {
   setTimeout(() => t.classList.remove('show'), 2800);
 }
 
-// Seed demo data on first use
+// ===== SEED DATA (首次使用示例) =====
 function seedDemo() {
   if (inventory.length > 0) return;
-  inventory = [
+  const demo = [
     { id:'1', name:'NMN', brand:'Alive By Science', category:'线粒体', stock:150, daily:2, threshold:14, spec:'250mg×60粒/瓶', addedAt:'2026/5/1' },
     { id:'2', name:'TMG (三甲基甘氨酸)', brand:'Jarrow Formulas', category:'甲基化', stock:45, daily:3, threshold:14, spec:'500mg×60粒/瓶', addedAt:'2026/5/1' },
     { id:'3', name:'镁甘氨酸', brand:'Thorne', category:'矿物质', stock:8, daily:2, threshold:21, spec:'200mg×90粒/瓶', addedAt:'2026/4/20' },
     { id:'4', name:'鱼油 Omega-3', brand:'Nordic Naturals', category:'抗氧化', stock:60, daily:2, threshold:14, spec:'1000mg×120粒/瓶', addedAt:'2026/5/1' },
     { id:'5', name:'维生素D3+K2', brand:'Life Extension', category:'其他', stock:3, daily:1, threshold:14, spec:'5000IU×60粒/瓶', addedAt:'2026/4/15' },
-    { id:'6', name:'辅酶Q10', brand:"Doctor's Best", category:'线粒体', stock:90, daily:1, threshold:14, spec:'200mg×90粒/瓶', addedAt:'2026/5/1' },
+    { id:'6', name:'辅酶Q10', brand:'Doctor\'s Best', category:'线粒体', stock:90, daily:1, threshold:14, spec:'200mg×90粒/瓶', addedAt:'2026/5/1' },
   ];
+  inventory = demo;
   save();
 }
 
 seedDemo();
 render();
-initSettings();
 </script>
 </body>
 </html>
