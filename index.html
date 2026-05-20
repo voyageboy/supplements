@@ -87,7 +87,9 @@
   .input-group { margin-bottom: 12px; }
   .input-label { font-size: 11px; font-weight: 600; color: var(--muted); letter-spacing: 1px; text-transform: uppercase; margin-bottom: 6px; display: block; }
   input, select { width: 100%; background: var(--surface); border: 1px solid var(--border); border-radius: 10px; padding: 11px 14px; color: var(--text); font-size: 14px; font-family: 'Sora', sans-serif; outline: none; transition: border-color 0.2s; -webkit-appearance: none; }
+  textarea { width: 100%; min-height: 118px; resize: vertical; background: var(--surface); border: 1px solid var(--border); border-radius: 10px; padding: 11px 14px; color: var(--text); font-size: 13px; line-height: 1.5; font-family: 'Sora', sans-serif; outline: none; transition: border-color 0.2s; }
   input:focus, select:focus { border-color: var(--accent2); }
+  textarea:focus { border-color: var(--accent2); }
   .row-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
 
   .btn-primary { width: 100%; padding: 14px; background: var(--accent); color: #0e0f11; border: none; border-radius: 12px; font-size: 15px; font-weight: 700; font-family: 'Sora', sans-serif; cursor: pointer; margin-top: 8px; }
@@ -196,6 +198,23 @@
   </div>
 
   <div class="divider">手动填写</div>
+
+  <div class="lookup-card show">
+    <div class="lookup-title">iHerb 导入助手</div>
+    <div class="lookup-text">粘贴 iHerb 商品链接、商品页复制的文字、订单里的商品名，或包含 UPC/条码的资料，然后点“解析并填入”。</div>
+    <div class="input-group" style="margin-top:12px">
+      <label class="input-label">iHerb 商品链接</label>
+      <input type="url" id="add-iherb-url" placeholder="https://www.iherb.com/pr/..." />
+    </div>
+    <div class="input-group">
+      <label class="input-label">粘贴商品信息</label>
+      <textarea id="iherb-paste" placeholder="例：复制 iHerb 商品标题、品牌、规格、UPC/Barcode/SKU 等信息到这里"></textarea>
+    </div>
+    <div class="toolbar">
+      <button class="btn-secondary accent" onclick="parseIherbInfo()">解析并填入</button>
+      <button class="btn-secondary" onclick="clearIherbImport()">清空</button>
+    </div>
+  </div>
 
   <div class="input-group">
     <label class="input-label">条形码</label>
@@ -416,6 +435,7 @@ function normalizeItem(item) {
     unit: UNITS.includes(item.unit) ? item.unit : '瓶',
     spec: String(item.spec || '').trim(),
     barcode: String(item.barcode || '').trim(),
+    iherbUrl: String(item.iherbUrl || '').trim(),
     addedAt: item.addedAt || new Date().toLocaleDateString('zh-CN')
   };
 }
@@ -528,17 +548,25 @@ function addSupplement() {
   if (!name) { showToast('请填写补剂名称','error'); return; }
   if (isNaN(stock)||stock<0) { showToast('请填写有效库存数量','error'); return; }
   if (isNaN(threshold)||threshold<0) { showToast('请填写有效补货阈值','error'); return; }
+  const barcode = document.getElementById('add-barcode').value.trim();
+  const duplicate = barcode ? inventory.find(i => i.barcode === barcode) : null;
+  if (duplicate) {
+    showToast('这个条码已存在，已打开原库存项','info');
+    openDetail(duplicate.id);
+    return;
+  }
   const item = {
     id: makeId(), name,
     brand: document.getElementById('add-brand').value.trim(),
     category: document.getElementById('add-category').value,
     stock, threshold, unit: document.getElementById('add-unit').value,
     spec: document.getElementById('add-spec').value.trim(),
-    barcode: document.getElementById('add-barcode').value.trim(),
+    barcode,
+    iherbUrl: document.getElementById('add-iherb-url').value.trim(),
     addedAt: new Date().toLocaleDateString('zh-CN')
   };
   inventory.push(item); save(); render();
-  ['add-name','add-brand','add-spec','add-barcode'].forEach(id=>document.getElementById(id).value='');
+  ['add-name','add-brand','add-spec','add-barcode','add-iherb-url','iherb-paste'].forEach(id=>document.getElementById(id).value='');
   document.getElementById('add-stock').value='1';
   document.getElementById('add-threshold').value='1';
   hideLookupCard();
@@ -553,7 +581,7 @@ function openDetail(id) {
   const st = getStatus(item);
   const unit = item.unit||'瓶';
   document.getElementById('modal-name').textContent = item.name;
-  document.getElementById('modal-sub').textContent = (item.brand||'未知品牌')+' · '+item.category+(item.spec?' · '+item.spec:'')+(item.barcode?' · 条码 '+item.barcode:'')+'\n入库时间：'+item.addedAt+' · 补货阈值：'+item.threshold+(item.unit||'瓶');
+  document.getElementById('modal-sub').textContent = (item.brand||'未知品牌')+' · '+item.category+(item.spec?' · '+item.spec:'')+(item.barcode?' · 条码 '+item.barcode:'')+(item.iherbUrl?' · iHerb 已绑定':'')+'\n入库时间：'+item.addedAt+' · 补货阈值：'+item.threshold+(item.unit||'瓶');
   const numEl = document.getElementById('modal-stock-num');
   numEl.textContent = item.stock; numEl.className = 'stock-big '+st;
   document.getElementById('modal-stock-unit').textContent = unit;
@@ -612,7 +640,7 @@ function saveEdit() {
   item.spec=document.getElementById('edit-spec').value.trim();
   save(); render();
   document.getElementById('modal-name').textContent=item.name;
-  document.getElementById('modal-sub').textContent=(item.brand||'未知品牌')+' · '+item.category+(item.spec?' · '+item.spec:'')+(item.barcode?' · 条码 '+item.barcode:'')+'\n入库时间：'+item.addedAt+' · 补货阈值：'+item.threshold+(item.unit||'瓶');
+  document.getElementById('modal-sub').textContent=(item.brand||'未知品牌')+' · '+item.category+(item.spec?' · '+item.spec:'')+(item.barcode?' · 条码 '+item.barcode:'')+(item.iherbUrl?' · iHerb 已绑定':'')+'\n入库时间：'+item.addedAt+' · 补货阈值：'+item.threshold+(item.unit||'瓶');
   document.getElementById('modal-stock-unit').textContent=item.unit||'瓶';
   switchTab('stock');
   showToast('✅ 信息已更新','success');
@@ -786,6 +814,149 @@ function lookupBarcodeFromInput() {
 function clearBarcode() {
   document.getElementById('add-barcode').value = '';
   hideLookupCard();
+}
+
+function parseIherbInfo() {
+  const url = document.getElementById('add-iherb-url').value.trim();
+  const pasted = document.getElementById('iherb-paste').value.trim();
+  const raw = (url + '\n' + pasted).trim();
+  if (!raw) {
+    showToast('请先粘贴 iHerb 链接或商品信息','error');
+    return;
+  }
+
+  const parsed = parseSupplementText(raw, url);
+  if (parsed.barcode) {
+    document.getElementById('add-barcode').value = parsed.barcode;
+    const existing = inventory.find(i => i.barcode === parsed.barcode);
+    if (existing) {
+      showLookupCard('已在库存中找到', '这个条码已经对应「'+existing.name+'」。我已打开它的库存详情。');
+      openDetail(existing.id);
+      return;
+    }
+  }
+  if (parsed.iherbUrl) document.getElementById('add-iherb-url').value = parsed.iherbUrl;
+  if (parsed.name) document.getElementById('add-name').value = parsed.name;
+  if (parsed.brand) document.getElementById('add-brand').value = parsed.brand;
+  if (parsed.spec) document.getElementById('add-spec').value = mergeSpecWithBarcode(parsed.spec, parsed.barcode || document.getElementById('add-barcode').value.trim()).replace(/\s*·\s*条形码:\s*$/, '');
+  document.getElementById('add-category').value = inferCategory({ product_name: (parsed.name || '') + ' ' + (parsed.spec || '') });
+
+  const filled = [
+    parsed.brand ? '品牌' : '',
+    parsed.name ? '名称' : '',
+    parsed.spec ? '规格' : '',
+    parsed.barcode ? '条码' : '',
+    parsed.iherbUrl ? '链接' : ''
+  ].filter(Boolean).join('、');
+  showLookupCard('iHerb 信息已解析', filled ? '已填入：'+filled+'。请快速确认一下再保存。' : '没有识别出足够信息，请多复制一点商品页内容再试。');
+  showToast(filled ? '已解析 iHerb 信息' : '可识别信息较少', filled ? 'success' : 'info');
+}
+
+function clearIherbImport() {
+  document.getElementById('add-iherb-url').value = '';
+  document.getElementById('iherb-paste').value = '';
+}
+
+function parseSupplementText(raw, explicitUrl) {
+  const text = String(raw || '').replace(/\r/g, '\n');
+  const lines = text.split('\n').map(line => line.trim()).filter(Boolean);
+  const url = explicitUrl || ((text.match(/https?:\/\/(?:www\.)?iherb\.com\/\S+/i) || [])[0] || '');
+  const barcode = findBarcode(text);
+  const fromText = parseTitleFromLines(lines);
+  const fromUrl = parseIherbUrl(url);
+  const itemNo = findIherbItemNumber(text, url);
+  const spec = findSpec(text) || fromText.spec || fromUrl.spec || (itemNo ? 'iHerb 商品编号: '+itemNo : '');
+
+  return {
+    iherbUrl: url,
+    barcode,
+    brand: fromText.brand || fromUrl.brand,
+    name: fromText.name || fromUrl.name,
+    spec
+  };
+}
+
+function parseTitleFromLines(lines) {
+  const ignored = /^(supplement facts|nutrition facts|details|description|reviews?|shipping|add to cart|in stock|out of stock|price|qty|quantity|商品详情|评论|加入购物车|有货|缺货)$/i;
+  const candidate = lines.find(line => line.length >= 6 && !ignored.test(line) && !/^https?:\/\//i.test(line));
+  if (!candidate) return {};
+  const cleaned = candidate.replace(/\s+/g, ' ').replace(/\s+-\s+iHerb.*$/i, '').trim();
+  const parts = cleaned.split(',').map(p => p.trim()).filter(Boolean);
+  if (parts.length >= 2 && parts[0].length <= 36) {
+    return { brand: parts[0], name: parts.slice(1).join(', '), spec: findSpec(cleaned) };
+  }
+  return { name: cleaned, spec: findSpec(cleaned) };
+}
+
+function parseIherbUrl(url) {
+  if (!url) return {};
+  try {
+    const u = new URL(url);
+    const parts = u.pathname.split('/').filter(Boolean);
+    const prIndex = parts.findIndex(p => p.toLowerCase() === 'pr');
+    const slug = prIndex >= 0 ? parts[prIndex + 1] : parts.find(p => /-/.test(p));
+    const itemNo = parts.find(p => /^\d{4,}$/.test(p));
+    if (!slug) return itemNo ? { spec: 'iHerb 商品编号: '+itemNo } : {};
+    return titleFromSlug(slug, itemNo);
+  } catch(e) {
+    return {};
+  }
+}
+
+function titleFromSlug(slug, itemNo) {
+  const knownBrands = [
+    'California Gold Nutrition','Life Extension','NOW Foods','Doctor\'s Best','Jarrow Formulas','Thorne','Nordic Naturals',
+    'Solgar','Source Naturals','Natural Factors','Nature\'s Way','Sports Research','Optimum Nutrition','Garden of Life',
+    'Pure Encapsulations','Swanson','Carlson','Enzymedica','MegaFood','Nutricost','Lake Avenue Nutrition','21st Century',
+    'Healthy Origins','Country Life','Bluebonnet Nutrition','Nature Made','Kirkman Labs','MRM Nutrition','ALLMAX Nutrition'
+  ];
+  const title = slug.split('-').map(word => {
+    if (/^\d+$/.test(word)) return word;
+    if (/^(mg|mcg|iu|d3|k2|b12|b6|nmn|tmg|dha|epa|q10)$/i.test(word)) return word.toUpperCase();
+    return word.charAt(0).toUpperCase() + word.slice(1);
+  }).join(' ');
+  const normalizedTitle = normalizeForMatch(title);
+  let brand = '';
+  for (const candidate of knownBrands) {
+    if (normalizedTitle.startsWith(normalizeForMatch(candidate))) {
+      brand = candidate;
+      break;
+    }
+  }
+  const name = brand ? title.slice(brand.length).replace(/^[-,\s]+/, '').trim() : title;
+  const spec = [findSpec(title), itemNo ? 'iHerb 商品编号: '+itemNo : ''].filter(Boolean).join(' · ');
+  return { brand, name, spec };
+}
+
+function normalizeForMatch(value) {
+  return String(value || '').toLowerCase().replace(/[^a-z0-9]+/g, '');
+}
+
+function findBarcode(text) {
+  const labeled = text.match(/(?:UPC|Barcode|Bar\s*Code|条形码|條形碼|EAN|GTIN)\D{0,20}(\d{8,14})/i);
+  if (labeled) return labeled[1];
+  const standalone = text.match(/\b(\d{12,14})\b/);
+  return standalone ? standalone[1] : '';
+}
+
+function findIherbItemNumber(text, url) {
+  const labeled = text.match(/(?:Item\s*#|Product\s*Code|SKU|商品编号|商品編號|货号|貨號)\D{0,20}([A-Z0-9-]{4,})/i);
+  if (labeled) return labeled[1];
+  const pathNo = String(url || '').match(/\/(\d{4,})(?:[/?#]|$)/);
+  return pathNo ? pathNo[1] : '';
+}
+
+function findSpec(text) {
+  const patterns = [
+    /\b\d+(?:\.\d+)?\s*(?:mg|mcg|g|iu|ml)\b.{0,36}?\b\d+\s*(?:capsules?|veggie capsules?|softgels?|tablets?|servings?|gummies?|lozenges?|粒|片|胶囊|膠囊|软胶囊|軟膠囊|份|包|袋|瓶)\b/i,
+    /\b\d+\s*(?:capsules?|veggie capsules?|softgels?|tablets?|servings?|gummies?|lozenges?|粒|片|胶囊|膠囊|软胶囊|軟膠囊|份|包|袋|瓶)\b/i,
+    /\b\d+(?:\.\d+)?\s*(?:mg|mcg|g|iu|ml)\b/i
+  ];
+  for (const pattern of patterns) {
+    const match = String(text || '').match(pattern);
+    if (match) return match[0].trim();
+  }
+  return '';
 }
 
 async function lookupBarcode(code) {
