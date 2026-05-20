@@ -4,7 +4,6 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0">
 <title>补剂库存管理</title>
-<script src="https://cdnjs.cloudflare.com/ajax/libs/quagga/0.12.1/quagga.min.js" onerror="window.Quagga=null"></script>
 <style>
   @import url('https://fonts.googleapis.com/css2?family=DM+Mono:wght@400;500&family=Sora:wght@300;400;600;700&display=swap');
 
@@ -67,11 +66,20 @@
 
   #scanner-container { position: relative; border-radius: var(--radius); overflow: hidden; background: #000; margin-bottom: 16px; display: none; }
   #scanner-container video, #scanner-container canvas { width: 100% !important; height: auto !important; display: block; }
+  #scanner-video { width: 100%; display: block; }
   .scan-overlay { position: absolute; inset: 0; display: flex; align-items: center; justify-content: center; pointer-events: none; }
   .scan-frame { width: 240px; height: 120px; border: 2px solid var(--accent); border-radius: 8px; box-shadow: 0 0 0 2000px rgba(0,0,0,0.4); position: relative; overflow: hidden; }
   .scan-line { position: absolute; width: 100%; height: 2px; background: var(--accent); animation: scanline 2s ease-in-out infinite; }
   @keyframes scanline { 0%,100% { top:10%; opacity:.8; } 50% { top:85%; opacity:1; } }
   .stop-scan-btn { width: 100%; padding: 12px; background: var(--surface2); border: 1px solid var(--border); border-radius: 10px; color: var(--muted); font-size: 13px; font-weight: 600; cursor: pointer; font-family: 'Sora', sans-serif; margin-bottom: 16px; }
+  .lookup-card { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius); padding: 14px 16px; margin-bottom: 16px; display: none; }
+  .lookup-card.show { display: block; }
+  .lookup-title { font-size: 13px; font-weight: 700; margin-bottom: 6px; }
+  .lookup-text { font-size: 12px; color: var(--muted); line-height: 1.6; }
+  .toolbar { display: flex; gap: 8px; margin-top: 12px; }
+  .btn-secondary { flex: 1; padding: 12px; background: var(--surface2); color: var(--text); border: 1px solid var(--border); border-radius: 10px; font-size: 13px; font-weight: 600; cursor: pointer; font-family: 'Sora', sans-serif; }
+  .btn-secondary.accent { border-color: var(--accent); color: var(--accent); }
+  .btn-secondary.warn { border-color: var(--warn); color: var(--warn); }
 
   .divider { display: flex; align-items: center; gap: 12px; margin: 20px 0; color: var(--muted); font-size: 12px; }
   .divider::before, .divider::after { content: ''; flex: 1; height: 1px; background: var(--border); }
@@ -132,6 +140,8 @@
   .empty-state { text-align: center; padding: 60px 20px; color: var(--muted); }
   .empty-state .emoji { font-size: 48px; margin-bottom: 16px; }
   .empty-state p { font-size: 14px; line-height: 1.6; }
+  .settings-card { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius); padding: 14px 16px; margin-top: 18px; }
+  .settings-card p { color: var(--muted); font-size: 12px; line-height: 1.6; margin-top: 6px; }
 
   select option { background: var(--surface2); }
 </style>
@@ -172,11 +182,25 @@
     <div class="scan-hint">扫描后条形码自动填入备注栏</div>
   </div>
   <div id="scanner-container">
+    <video id="scanner-video" autoplay muted playsinline></video>
     <div class="scan-overlay"><div class="scan-frame"><div class="scan-line"></div></div></div>
   </div>
   <button class="stop-scan-btn" id="stop-btn" style="display:none" onclick="stopScan()">停止扫描</button>
+  <div class="lookup-card" id="lookup-card">
+    <div class="lookup-title" id="lookup-title">条码识别</div>
+    <div class="lookup-text" id="lookup-text"></div>
+  </div>
 
   <div class="divider">手动填写</div>
+
+  <div class="input-group">
+    <label class="input-label">条形码</label>
+    <input type="text" id="add-barcode" placeholder="扫码后自动填入，也可手动输入" inputmode="numeric" />
+    <div class="toolbar">
+      <button class="btn-secondary accent" onclick="lookupBarcodeFromInput()">查询商品信息</button>
+      <button class="btn-secondary" onclick="clearBarcode()">清空条码</button>
+    </div>
+  </div>
 
   <div class="input-group">
     <label class="input-label">补剂名称 *</label>
@@ -203,6 +227,11 @@
       <input type="number" id="add-stock" placeholder="例：3" min="0" value="1" />
     </div>
     <div class="input-group">
+      <label class="input-label">补货阈值</label>
+      <input type="number" id="add-threshold" placeholder="例：1" min="0" value="1" />
+    </div>
+  </div>
+  <div class="input-group">
       <label class="input-label">单位</label>
       <select id="add-unit">
         <option value="瓶">瓶</option>
@@ -213,7 +242,6 @@
         <option value="ml">ml</option>
         <option value="个">个</option>
       </select>
-    </div>
   </div>
   <div class="input-group">
     <label class="input-label">规格备注</label>
@@ -224,8 +252,19 @@
 
 <!-- 补货清单页 -->
 <div class="page" id="page-shopping">
-  <div class="section-title">需要补货（库存 ≤ 1）</div>
+  <div class="section-title">需要补货（低于各自阈值）</div>
   <div id="shopping-list"></div>
+
+  <div class="section-title">数据备份</div>
+  <div class="settings-card">
+    <div class="lookup-title">导出 / 导入库存</div>
+    <p>数据保存在当前浏览器。建议偶尔导出备份，换手机或清理浏览器前尤其有用。</p>
+    <div class="toolbar">
+      <button class="btn-secondary accent" onclick="exportData()">导出备份</button>
+      <button class="btn-secondary" onclick="document.getElementById('import-file').click()">导入备份</button>
+    </div>
+    <input id="import-file" type="file" accept="application/json,.json" style="display:none" onchange="importData(event)" />
+  </div>
 </div>
 
 <!-- 底部导航 -->
@@ -309,6 +348,10 @@
         </select>
       </div>
       <div class="input-group">
+        <label class="input-label">补货阈值</label>
+        <input type="number" id="edit-threshold" min="0" />
+      </div>
+      <div class="input-group">
         <label class="input-label">规格备注</label>
         <input type="text" id="edit-spec" placeholder="例：500mg × 60粒/瓶" />
       </div>
@@ -321,21 +364,64 @@
 <div class="toast" id="toast"></div>
 
 <script>
-let inventory = JSON.parse(localStorage.getItem('supp_inventory') || '[]');
+let inventory = safeParseInventory(localStorage.getItem('supp_inventory'));
 let currentFilter = '全部';
 let activeItemId = null;
+let scanStream = null;
+let scanTimer = null;
+let barcodeDetector = null;
 
 const CATEGORY_ICONS = { '甲基化':'🧬', '线粒体':'⚡', '抗氧化':'🛡️', '肠道':'🌿', '矿物质':'💎', '其他':'💊' };
 const UNITS = ['瓶','罐','袋','盒','支','ml','个'];
+const BARCODE_FORMATS = ['ean_13','ean_8','upc_a','upc_e','code_128','code_39'];
+
+function safeParseInventory(raw) {
+  try {
+    const parsed = JSON.parse(raw || '[]');
+    return Array.isArray(parsed) ? parsed : [];
+  } catch(e) {
+    return [];
+  }
+}
+
+function makeId() {
+  return Date.now().toString(36) + Math.random().toString(36).slice(2, 8);
+}
+
+function escapeHTML(value) {
+  return String(value ?? '').replace(/[&<>"']/g, ch => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[ch]));
+}
+
+function escapeAttr(value) {
+  return escapeHTML(value).replace(/`/g, '&#96;');
+}
+
+function normalizeItem(item) {
+  const stock = parseInt(item.stock);
+  const threshold = parseInt(item.threshold);
+  return {
+    id: String(item.id || makeId()),
+    name: String(item.name || '').trim(),
+    brand: String(item.brand || '').trim(),
+    category: CATEGORY_ICONS[item.category] ? item.category : '其他',
+    stock: isNaN(stock) || stock < 0 ? 0 : stock,
+    threshold: isNaN(threshold) || threshold < 0 ? 1 : threshold,
+    unit: UNITS.includes(item.unit) ? item.unit : '瓶',
+    spec: String(item.spec || '').trim(),
+    barcode: String(item.barcode || '').trim(),
+    addedAt: item.addedAt || new Date().toLocaleDateString('zh-CN')
+  };
+}
 
 function save() { localStorage.setItem('supp_inventory', JSON.stringify(inventory)); }
 
 // 状态逻辑：基于包装数量
-// 0 = critical（红）, 1 = warn（橙）, 2-4 = ok（绿）, 5+ = plenty（灰，库存充足）
+// 0 = critical（红）, 低于/等于阈值 = warn（橙）, 阈值以上 = ok, 5+ 且明显超过阈值 = plenty（灰）
 function getStatus(item) {
   if (item.stock === 0) return 'critical';
-  if (item.stock === 1) return 'warn';
-  if (item.stock >= 5) return 'plenty';
+  const threshold = Number.isFinite(item.threshold) ? item.threshold : 1;
+  if (item.stock <= threshold) return 'warn';
+  if (item.stock >= Math.max(5, threshold + 4)) return 'plenty';
   return 'ok';
 }
 
@@ -361,19 +447,19 @@ function renderInventory() {
     const unit = item.unit || '瓶';
     const icon = CATEGORY_ICONS[item.category] || '💊';
     const badge = st==='critical' ? '<div class="supp-meta" style="margin-top:3px;color:var(--danger)">🚨 已用完</div>'
-                : st==='warn'     ? '<div class="supp-meta" style="margin-top:3px;color:var(--warn)">⚠️ 最后 1 '+unit+'，请补货</div>'
+                : st==='warn'     ? '<div class="supp-meta" style="margin-top:3px;color:var(--warn)">⚠️ 低于补货阈值 '+escapeHTML(item.threshold)+' '+escapeHTML(unit)+'</div>'
                 : st==='plenty'   ? '<div class="supp-meta" style="margin-top:3px;color:var(--muted)">库存充足</div>'
                 : '';
-    return '<div class="supp-card '+st+'" onclick="openDetail(\''+item.id+'\')">'
+    return '<div class="supp-card '+st+'" data-id="'+escapeAttr(item.id)+'" onclick="openDetailFromCard(this)">'
       + '<div class="supp-icon">'+icon+'</div>'
       + '<div class="supp-info">'
-      +   '<div class="supp-name">'+item.name+'</div>'
-      +   '<div class="supp-meta">'+(item.brand||'—')+' · '+(item.spec||item.category)+'</div>'
+      +   '<div class="supp-name">'+escapeHTML(item.name)+'</div>'
+      +   '<div class="supp-meta">'+escapeHTML(item.brand||'—')+' · '+escapeHTML(item.spec||item.category)+'</div>'
       +   badge
       + '</div>'
       + '<div class="supp-right">'
-      +   '<div class="supp-stock '+st+'">'+item.stock+'</div>'
-      +   '<div class="supp-unit">'+unit+'</div>'
+      +   '<div class="supp-stock '+st+'">'+escapeHTML(item.stock)+'</div>'
+      +   '<div class="supp-unit">'+escapeHTML(unit)+'</div>'
       + '</div>'
       + '</div>';
   }).join('');
@@ -396,15 +482,15 @@ function renderShopping() {
     const st = getStatus(item);
     const unit = item.unit||'瓶';
     const icon = CATEGORY_ICONS[item.category]||'💊';
-    return '<div class="supp-card '+st+'" onclick="openDetail(\''+item.id+'\')">'
+    return '<div class="supp-card '+st+'" data-id="'+escapeAttr(item.id)+'" onclick="openDetailFromCard(this)">'
       + '<div class="supp-icon">'+icon+'</div>'
       + '<div class="supp-info">'
-      +   '<div class="supp-name">'+item.name+'</div>'
-      +   '<div class="supp-meta">'+(item.brand||'—')+(item.spec?' · '+item.spec:'')+'</div>'
+      +   '<div class="supp-name">'+escapeHTML(item.name)+'</div>'
+      +   '<div class="supp-meta">'+escapeHTML(item.brand||'—')+(item.spec?' · '+escapeHTML(item.spec):'')+'</div>'
       +   '<div class="supp-meta" style="margin-top:3px;color:'+(st==='critical'?'var(--danger)':'var(--warn)')+'">'+
-            (st==='critical'?'🚨 已用完，需要购买':'⚠️ 仅剩最后 1 '+unit)+'</div>'
+            (st==='critical'?'🚨 已用完，需要购买':'⚠️ 剩余 '+escapeHTML(item.stock)+' '+escapeHTML(unit)+'，低于阈值 '+escapeHTML(item.threshold))+'</div>'
       + '</div>'
-      + '<div class="supp-right"><div class="supp-stock '+st+'">'+item.stock+'</div><div class="supp-unit">'+unit+'</div></div>'
+      + '<div class="supp-right"><div class="supp-stock '+st+'">'+escapeHTML(item.stock)+'</div><div class="supp-unit">'+escapeHTML(unit)+'</div></div>'
       + '</div>';
   }).join('');
 }
@@ -424,22 +510,31 @@ function filterBy(cat, el) {
   renderInventory();
 }
 
+function openDetailFromCard(el) {
+  openDetail(el.dataset.id);
+}
+
 function addSupplement() {
   const name = document.getElementById('add-name').value.trim();
   const stock = parseInt(document.getElementById('add-stock').value);
+  const threshold = parseInt(document.getElementById('add-threshold').value);
   if (!name) { showToast('请填写补剂名称','error'); return; }
   if (isNaN(stock)||stock<0) { showToast('请填写有效库存数量','error'); return; }
+  if (isNaN(threshold)||threshold<0) { showToast('请填写有效补货阈值','error'); return; }
   const item = {
-    id: Date.now().toString(), name,
+    id: makeId(), name,
     brand: document.getElementById('add-brand').value.trim(),
     category: document.getElementById('add-category').value,
-    stock, unit: document.getElementById('add-unit').value,
+    stock, threshold, unit: document.getElementById('add-unit').value,
     spec: document.getElementById('add-spec').value.trim(),
+    barcode: document.getElementById('add-barcode').value.trim(),
     addedAt: new Date().toLocaleDateString('zh-CN')
   };
   inventory.push(item); save(); render();
-  ['add-name','add-brand','add-spec'].forEach(id=>document.getElementById(id).value='');
+  ['add-name','add-brand','add-spec','add-barcode'].forEach(id=>document.getElementById(id).value='');
   document.getElementById('add-stock').value='1';
+  document.getElementById('add-threshold').value='1';
+  hideLookupCard();
   showToast('✅ '+name+' 已入库','success');
   showPage('home', document.querySelector('.nav-item'));
 }
@@ -451,7 +546,7 @@ function openDetail(id) {
   const st = getStatus(item);
   const unit = item.unit||'瓶';
   document.getElementById('modal-name').textContent = item.name;
-  document.getElementById('modal-sub').textContent = (item.brand||'未知品牌')+' · '+item.category+(item.spec?' · '+item.spec:'')+'\n入库时间：'+item.addedAt;
+  document.getElementById('modal-sub').textContent = (item.brand||'未知品牌')+' · '+item.category+(item.spec?' · '+item.spec:'')+(item.barcode?' · 条码 '+item.barcode:'')+'\n入库时间：'+item.addedAt+' · 补货阈值：'+item.threshold+(item.unit||'瓶');
   const numEl = document.getElementById('modal-stock-num');
   numEl.textContent = item.stock; numEl.className = 'stock-big '+st;
   document.getElementById('modal-stock-unit').textContent = unit;
@@ -461,6 +556,7 @@ function openDetail(id) {
   document.getElementById('edit-brand').value = item.brand||'';
   document.getElementById('edit-category').value = item.category||'其他';
   document.getElementById('edit-unit').value = UNITS.includes(unit)?unit:'瓶';
+  document.getElementById('edit-threshold').value = item.threshold ?? 1;
   document.getElementById('edit-spec').value = item.spec||'';
   switchTab('stock');
   document.getElementById('detail-modal').classList.add('show');
@@ -498,15 +594,18 @@ function saveEdit() {
   const item = inventory.find(i=>i.id===activeItemId);
   if (!item) return;
   const name = document.getElementById('edit-name').value.trim();
+  const threshold = parseInt(document.getElementById('edit-threshold').value);
   if (!name) { showToast('名称不能为空','error'); return; }
+  if (isNaN(threshold)||threshold<0) { showToast('请填写有效补货阈值','error'); return; }
   item.name=name;
   item.brand=document.getElementById('edit-brand').value.trim();
   item.category=document.getElementById('edit-category').value;
   item.unit=document.getElementById('edit-unit').value;
+  item.threshold=threshold;
   item.spec=document.getElementById('edit-spec').value.trim();
   save(); render();
   document.getElementById('modal-name').textContent=item.name;
-  document.getElementById('modal-sub').textContent=(item.brand||'未知品牌')+' · '+item.category+(item.spec?' · '+item.spec:'')+'\n入库时间：'+item.addedAt;
+  document.getElementById('modal-sub').textContent=(item.brand||'未知品牌')+' · '+item.category+(item.spec?' · '+item.spec:'')+(item.barcode?' · 条码 '+item.barcode:'')+'\n入库时间：'+item.addedAt+' · 补货阈值：'+item.threshold+(item.unit||'瓶');
   document.getElementById('modal-stock-unit').textContent=item.unit||'瓶';
   switchTab('stock');
   showToast('✅ 信息已更新','success');
@@ -520,37 +619,195 @@ function deleteItem() {
   showToast('已删除 '+item.name,'error');
 }
 
-// 扫码
+// 扫码与条码查询
 let scanning = false;
-function startScan() {
-  if (!window.Quagga) { showToast('扫码库加载失败，请刷新重试','error'); return; }
-  const container = document.getElementById('scanner-container');
-  container.style.display='block';
-  document.getElementById('stop-btn').style.display='block';
-  document.getElementById('scan-area').style.display='none';
-  scanning=true;
-  Quagga.init({
-    inputStream:{name:'Live',type:'LiveStream',target:container,constraints:{facingMode:'environment',width:{min:640},height:{min:360}}},
-    decoder:{readers:['ean_reader','upc_reader','ean_8_reader','code_128_reader','code_39_reader']},locate:true
-  }, err=>{
-    if(err){showToast('无法访问摄像头','error');stopScan();return;}
-    Quagga.start();
-  });
-  Quagga.onDetected(result=>{
-    const code=result.codeResult.code;
+async function startScan() {
+  if (!('BarcodeDetector' in window)) {
+    showLookupCard('此浏览器暂不支持直接扫码', '可以手动输入条形码后点“查询商品信息”。Chrome/Android 上的成功率通常更高。');
+    showToast('当前浏览器不支持原生扫码','error');
+    document.getElementById('add-barcode').focus();
+    return;
+  }
+
+  try {
+    barcodeDetector = new BarcodeDetector({ formats: BARCODE_FORMATS });
+    scanStream = await navigator.mediaDevices.getUserMedia({
+      video: { facingMode: { ideal: 'environment' }, width: { ideal: 1280 }, height: { ideal: 720 } },
+      audio: false
+    });
+    const video = document.getElementById('scanner-video');
+    video.srcObject = scanStream;
+    await video.play();
+    document.getElementById('scanner-container').style.display='block';
+    document.getElementById('stop-btn').style.display='block';
+    document.getElementById('scan-area').style.display='none';
+    scanning = true;
+    showLookupCard('正在扫描', '请把条形码放进取景框内，保持 1-2 秒。');
+    scanLoop();
+  } catch(e) {
     stopScan();
-    document.getElementById('add-spec').value='条形码: '+code;
-    showToast('📷 已识别: '+code,'info');
-    document.getElementById('add-name').focus();
-  });
+    showLookupCard('无法打开摄像头', '请确认浏览器允许相机权限，或者手动输入条形码查询。');
+    showToast('无法访问摄像头','error');
+  }
+}
+
+async function scanLoop() {
+  if (!scanning || !barcodeDetector) return;
+  const video = document.getElementById('scanner-video');
+  try {
+    const codes = await barcodeDetector.detect(video);
+    if (codes && codes.length > 0) {
+      await handleBarcode(codes[0].rawValue);
+      return;
+    }
+  } catch(e) {}
+  scanTimer = setTimeout(scanLoop, 450);
 }
 
 function stopScan() {
-  if(!scanning)return; scanning=false;
-  try{Quagga.stop();}catch(e){}
+  if(scanTimer) clearTimeout(scanTimer);
+  scanTimer = null;
+  scanning=false;
+  const video = document.getElementById('scanner-video');
+  if (video) video.srcObject = null;
+  if (scanStream) scanStream.getTracks().forEach(track=>track.stop());
+  scanStream = null;
   document.getElementById('scanner-container').style.display='none';
   document.getElementById('stop-btn').style.display='none';
   document.getElementById('scan-area').style.display='block';
+}
+
+async function handleBarcode(code) {
+  const cleanCode = String(code || '').trim();
+  if (!cleanCode) return;
+  stopScan();
+  document.getElementById('add-barcode').value = cleanCode;
+  const existing = inventory.find(i => i.barcode === cleanCode);
+  if (existing) {
+    showLookupCard('已在库存中找到', '这个条码已经对应「'+existing.name+'」。我已打开它的库存详情。');
+    openDetail(existing.id);
+    return;
+  }
+  showToast('📷 已识别条码 '+cleanCode,'info');
+  await lookupBarcode(cleanCode);
+}
+
+function lookupBarcodeFromInput() {
+  const code = document.getElementById('add-barcode').value.trim();
+  if (!code) { showToast('请先输入条形码','error'); return; }
+  handleBarcode(code);
+}
+
+function clearBarcode() {
+  document.getElementById('add-barcode').value = '';
+  hideLookupCard();
+}
+
+async function lookupBarcode(code) {
+  showLookupCard('正在查询商品信息', '条码：'+code+'。如果公开数据库没有收录，仍然可以手动填写。');
+  try {
+    const controller = new AbortController();
+    const timer = setTimeout(()=>controller.abort(), 9000);
+    const url = 'https://world.openfoodfacts.org/api/v3/product/'+encodeURIComponent(code)+'?product_type=all&fields=product_name,brands,quantity,serving_size,categories,categories_tags';
+    const res = await fetch(url, { signal: controller.signal });
+    clearTimeout(timer);
+    if (!res.ok) throw new Error('lookup failed');
+    const data = await res.json();
+    if (!data.product) {
+      showLookupCard('没有查到商品资料', '已保留条码 '+code+'。你可以手动填写名称、品牌和规格，保存后下次扫码会自动识别为这个库存项。');
+      document.getElementById('add-spec').value = mergeSpecWithBarcode(document.getElementById('add-spec').value, code);
+      document.getElementById('add-name').focus();
+      return;
+    }
+    applyProductInfo(data.product, code);
+  } catch(e) {
+    showLookupCard('查询暂时不可用', '已保留条码 '+code+'。可能是网络、数据库或浏览器限制导致，仍可手动填写后保存。');
+    document.getElementById('add-spec').value = mergeSpecWithBarcode(document.getElementById('add-spec').value, code);
+    document.getElementById('add-name').focus();
+  }
+}
+
+function applyProductInfo(product, code) {
+  const name = product.product_name || '';
+  const brand = product.brands || '';
+  const spec = product.quantity || product.serving_size || '';
+  if (name) document.getElementById('add-name').value = name;
+  if (brand) document.getElementById('add-brand').value = brand.split(',')[0].trim();
+  if (spec) document.getElementById('add-spec').value = mergeSpecWithBarcode(spec, code);
+  else document.getElementById('add-spec').value = mergeSpecWithBarcode(document.getElementById('add-spec').value, code);
+  document.getElementById('add-category').value = inferCategory(product);
+  showLookupCard('已自动填入商品信息', (name || '未命名商品') + (brand ? ' · ' + brand : '') + (spec ? ' · ' + spec : ''));
+  showToast('已找到商品信息','success');
+  document.getElementById('add-stock').focus();
+}
+
+function inferCategory(product) {
+  const text = ((product.categories || '') + ' ' + ((product.categories_tags || []).join(' ')) + ' ' + (product.product_name || '')).toLowerCase();
+  if (/magnesium|zinc|iron|calcium|minerals?|镁|锌|铁|钙/.test(text)) return '矿物质';
+  if (/probiotic|prebiotic|fiber|gut|益生菌|益生元|肠道/.test(text)) return '肠道';
+  if (/omega|fish oil|coq10|q10|nmn|nad|mitochondria|鱼油|辅酶/.test(text)) return '线粒体';
+  if (/glutathione|vitamin c|antioxidant|resveratrol|抗氧化/.test(text)) return '抗氧化';
+  if (/methyl|b12|folate|tmg|sam-e|甲基|叶酸/.test(text)) return '甲基化';
+  return '其他';
+}
+
+function mergeSpecWithBarcode(spec, code) {
+  const cleanSpec = String(spec || '').replace(/\s*条形码:\s*\S+\s*/g, '').trim();
+  return (cleanSpec ? cleanSpec + ' · ' : '') + '条形码: ' + code;
+}
+
+function showLookupCard(title, text) {
+  document.getElementById('lookup-title').textContent = title;
+  document.getElementById('lookup-text').textContent = text;
+  document.getElementById('lookup-card').classList.add('show');
+}
+
+function hideLookupCard() {
+  document.getElementById('lookup-card').classList.remove('show');
+}
+
+function exportData() {
+  const payload = {
+    app: 'supp_inventory',
+    version: 2,
+    exportedAt: new Date().toISOString(),
+    inventory
+  };
+  const blob = new Blob([JSON.stringify(payload, null, 2)], { type: 'application/json' });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  const date = new Date().toISOString().slice(0,10);
+  a.href = url;
+  a.download = 'supp-inventory-backup-' + date + '.json';
+  document.body.appendChild(a);
+  a.click();
+  a.remove();
+  URL.revokeObjectURL(url);
+  showToast('备份已导出','success');
+}
+
+function importData(event) {
+  const file = event.target.files && event.target.files[0];
+  if (!file) return;
+  const reader = new FileReader();
+  reader.onload = () => {
+    try {
+      const parsed = JSON.parse(reader.result);
+      const list = Array.isArray(parsed) ? parsed : parsed.inventory;
+      if (!Array.isArray(list)) throw new Error('invalid backup');
+      const normalized = list.map(normalizeItem).filter(i => i.name);
+      if (!normalized.length) throw new Error('empty backup');
+      if (!confirm('将导入 '+normalized.length+' 条库存记录，并覆盖当前数据。确定继续吗？')) return;
+      inventory = normalized;
+      save(); render();
+      showToast('导入完成','success');
+    } catch(e) {
+      showToast('备份文件无法识别','error');
+    } finally {
+      event.target.value = '';
+    }
+  };
+  reader.readAsText(file);
 }
 
 function showToast(msg, type='success') {
@@ -563,16 +820,18 @@ function showToast(msg, type='success') {
 function seedDemo() {
   if(inventory.length>0) return;
   inventory=[
-    {id:'1',name:'NMN',brand:'Alive By Science',category:'线粒体',stock:3,unit:'瓶',spec:'250mg×60粒/瓶',addedAt:'2026/5/1'},
-    {id:'2',name:'TMG',brand:'Jarrow Formulas',category:'甲基化',stock:1,unit:'瓶',spec:'500mg×60粒/瓶',addedAt:'2026/5/1'},
-    {id:'3',name:'镁甘氨酸',brand:'Thorne',category:'矿物质',stock:0,unit:'瓶',spec:'200mg×90粒/瓶',addedAt:'2026/4/20'},
-    {id:'4',name:'鱼油 Omega-3',brand:'Nordic Naturals',category:'抗氧化',stock:6,unit:'瓶',spec:'1000mg×120粒/瓶',addedAt:'2026/5/1'},
-    {id:'5',name:'维生素D3+K2',brand:'Life Extension',category:'其他',stock:2,unit:'瓶',spec:'5000IU×60粒/瓶',addedAt:'2026/4/15'},
-    {id:'6',name:'辅酶Q10',brand:"Doctor's Best",category:'线粒体',stock:5,unit:'瓶',spec:'200mg×90粒/瓶',addedAt:'2026/5/1'},
-  ];
+    {id:'1',name:'NMN',brand:'Alive By Science',category:'线粒体',stock:3,threshold:1,unit:'瓶',spec:'250mg×60粒/瓶',barcode:'',addedAt:'2026/5/1'},
+    {id:'2',name:'TMG',brand:'Jarrow Formulas',category:'甲基化',stock:1,threshold:1,unit:'瓶',spec:'500mg×60粒/瓶',barcode:'',addedAt:'2026/5/1'},
+    {id:'3',name:'镁甘氨酸',brand:'Thorne',category:'矿物质',stock:0,threshold:1,unit:'瓶',spec:'200mg×90粒/瓶',barcode:'',addedAt:'2026/4/20'},
+    {id:'4',name:'鱼油 Omega-3',brand:'Nordic Naturals',category:'抗氧化',stock:6,threshold:1,unit:'瓶',spec:'1000mg×120粒/瓶',barcode:'',addedAt:'2026/5/1'},
+    {id:'5',name:'维生素D3+K2',brand:'Life Extension',category:'其他',stock:2,threshold:1,unit:'瓶',spec:'5000IU×60粒/瓶',barcode:'',addedAt:'2026/4/15'},
+    {id:'6',name:'辅酶Q10',brand:"Doctor's Best",category:'线粒体',stock:5,threshold:1,unit:'瓶',spec:'200mg×90粒/瓶',barcode:'',addedAt:'2026/5/1'},
+  ].map(normalizeItem);
   save();
 }
 
+inventory = inventory.map(normalizeItem).filter(i => i.name);
+save();
 seedDemo();
 render();
 </script>
