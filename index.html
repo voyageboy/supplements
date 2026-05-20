@@ -370,10 +370,13 @@ let activeItemId = null;
 let scanStream = null;
 let scanTimer = null;
 let barcodeDetector = null;
+let zxingControls = null;
+let zxingLoading = null;
 
 const CATEGORY_ICONS = { '甲基化':'🧬', '线粒体':'⚡', '抗氧化':'🛡️', '肠道':'🌿', '矿物质':'💎', '其他':'💊' };
 const UNITS = ['瓶','罐','袋','盒','支','ml','个'];
 const BARCODE_FORMATS = ['ean_13','ean_8','upc_a','upc_e','code_128','code_39'];
+const ZXING_CDN = 'https://unpkg.com/@zxing/browser@0.2.0/umd/zxing-browser.min.js';
 
 function safeParseInventory(raw) {
   try {
@@ -623,9 +626,7 @@ function deleteItem() {
 let scanning = false;
 async function startScan() {
   if (!('BarcodeDetector' in window)) {
-    showLookupCard('此浏览器暂不支持直接扫码', '可以手动输入条形码后点“查询商品信息”。Chrome/Android 上的成功率通常更高。');
-    showToast('当前浏览器不支持原生扫码','error');
-    document.getElementById('add-barcode').focus();
+    await startZxingScan();
     return;
   }
 
@@ -651,6 +652,46 @@ async function startScan() {
   }
 }
 
+async function startZxingScan() {
+  try {
+    await loadZxing();
+    const video = document.getElementById('scanner-video');
+    const reader = new ZXingBrowser.BrowserMultiFormatReader();
+    document.getElementById('scanner-container').style.display='block';
+    document.getElementById('stop-btn').style.display='block';
+    document.getElementById('scan-area').style.display='none';
+    scanning = true;
+    showLookupCard('正在使用备用扫码', '请把条形码放进取景框内。首次加载备用扫码引擎需要联网。');
+    zxingControls = await reader.decodeFromConstraints(
+      { video: { facingMode: { ideal: 'environment' }, width: { ideal: 1280 }, height: { ideal: 720 } }, audio: false },
+      video,
+      (result) => {
+        if (!result || !scanning) return;
+        handleBarcode(result.getText ? result.getText() : result.text);
+      }
+    );
+  } catch(e) {
+    stopScan();
+    showLookupCard('此浏览器暂不支持扫码', '备用扫码引擎也没能启动。你仍然可以手动输入条形码后点“查询商品信息”。如果在手机上使用，建议通过 GitHub Pages 的 https 链接打开。');
+    showToast('扫码启动失败','error');
+    document.getElementById('add-barcode').focus();
+  }
+}
+
+function loadZxing() {
+  if (window.ZXingBrowser) return Promise.resolve();
+  if (zxingLoading) return zxingLoading;
+  zxingLoading = new Promise((resolve, reject) => {
+    const s = document.createElement('script');
+    s.src = ZXING_CDN;
+    s.async = true;
+    s.onload = () => window.ZXingBrowser ? resolve() : reject(new Error('ZXing 未加载'));
+    s.onerror = () => reject(new Error('ZXing 加载失败'));
+    document.head.appendChild(s);
+  });
+  return zxingLoading;
+}
+
 async function scanLoop() {
   if (!scanning || !barcodeDetector) return;
   const video = document.getElementById('scanner-video');
@@ -667,6 +708,10 @@ async function scanLoop() {
 function stopScan() {
   if(scanTimer) clearTimeout(scanTimer);
   scanTimer = null;
+  if (zxingControls && zxingControls.stop) {
+    try { zxingControls.stop(); } catch(e) {}
+  }
+  zxingControls = null;
   scanning=false;
   const video = document.getElementById('scanner-video');
   if (video) video.srcObject = null;
