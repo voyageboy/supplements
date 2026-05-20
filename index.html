@@ -179,7 +179,11 @@
   <div class="scan-area" id="scan-area">
     <div style="font-size:44px;margin-bottom:14px">📷</div>
     <button class="scan-btn" onclick="startScan()"><span>扫描条形码</span></button>
-    <div class="scan-hint">扫描后条形码自动填入备注栏</div>
+    <div class="toolbar">
+      <button class="btn-secondary accent" onclick="document.getElementById('barcode-photo').click()">拍照识别条码</button>
+    </div>
+    <input id="barcode-photo" type="file" accept="image/*" capture="environment" style="display:none" onchange="scanBarcodeImage(event)" />
+    <div class="scan-hint">iPhone Safari 如果实时扫码失败，请用“拍照识别条码”</div>
   </div>
   <div id="scanner-container">
     <video id="scanner-video" autoplay muted playsinline></video>
@@ -678,6 +682,42 @@ async function startZxingScan() {
   }
 }
 
+async function scanBarcodeImage(event) {
+  const file = event.target.files && event.target.files[0];
+  if (!file) return;
+  try {
+    await loadZxing();
+    showLookupCard('正在识别照片', '如果一次没识别到，可以让条码占满画面再拍一张。');
+    const img = new Image();
+    const url = URL.createObjectURL(file);
+    img.onload = async () => {
+      try {
+        const reader = new ZXingBrowser.BrowserMultiFormatReader();
+        const result = await reader.decodeFromImageElement(img);
+        URL.revokeObjectURL(url);
+        event.target.value = '';
+        await handleBarcode(result.getText ? result.getText() : result.text);
+      } catch(e) {
+        URL.revokeObjectURL(url);
+        event.target.value = '';
+        showLookupCard('照片里没有识别到条码', '请让条形码更清晰、更大一些，避免反光，然后再拍一次。也可以直接手动输入条码。');
+        showToast('没有识别到条码','error');
+      }
+    };
+    img.onerror = () => {
+      URL.revokeObjectURL(url);
+      event.target.value = '';
+      showLookupCard('照片读取失败', '请重新拍照，或者手动输入条码。');
+      showToast('照片读取失败','error');
+    };
+    img.src = url;
+  } catch(e) {
+    event.target.value = '';
+    showLookupCard('无法加载拍照识别', '请确认当前页面可以联网加载备用扫码引擎，或者先手动输入条码。');
+    showToast('拍照识别不可用','error');
+  }
+}
+
 function loadZxing() {
   if (window.ZXingBrowser) return Promise.resolve();
   if (zxingLoading) return zxingLoading;
@@ -750,25 +790,43 @@ function clearBarcode() {
 
 async function lookupBarcode(code) {
   showLookupCard('正在查询商品信息', '条码：'+code+'。如果公开数据库没有收录，仍然可以手动填写。');
-  try {
-    const controller = new AbortController();
-    const timer = setTimeout(()=>controller.abort(), 9000);
-    const url = 'https://world.openfoodfacts.org/api/v3/product/'+encodeURIComponent(code)+'?product_type=all&fields=product_name,brands,quantity,serving_size,categories,categories_tags';
-    const res = await fetch(url, { signal: controller.signal });
-    clearTimeout(timer);
-    if (!res.ok) throw new Error('lookup failed');
-    const data = await res.json();
-    if (!data.product) {
-      showLookupCard('没有查到商品资料', '已保留条码 '+code+'。你可以手动填写名称、品牌和规格，保存后下次扫码会自动识别为这个库存项。');
-      document.getElementById('add-spec').value = mergeSpecWithBarcode(document.getElementById('add-spec').value, code);
-      document.getElementById('add-name').focus();
+  const fields = 'product_name,brands,quantity,serving_size,categories,categories_tags';
+  const lookupUrls = [
+    'https://world.openfoodfacts.org/api/v2/product/'+encodeURIComponent(code)+'.json?fields='+fields,
+    'https://world.openproductsfacts.org/api/v2/product/'+encodeURIComponent(code)+'.json?fields='+fields,
+    'https://world.openbeautyfacts.org/api/v2/product/'+encodeURIComponent(code)+'.json?fields='+fields
+  ];
+  let hadNetworkError = false;
+
+  for (const url of lookupUrls) {
+    const data = await fetchProductInfo(url).catch(() => {
+      hadNetworkError = true;
+      return null;
+    });
+    if (data && data.product) {
+      applyProductInfo(data.product, code);
       return;
     }
-    applyProductInfo(data.product, code);
-  } catch(e) {
-    showLookupCard('查询暂时不可用', '已保留条码 '+code+'。可能是网络、数据库或浏览器限制导致，仍可手动填写后保存。');
-    document.getElementById('add-spec').value = mergeSpecWithBarcode(document.getElementById('add-spec').value, code);
-    document.getElementById('add-name').focus();
+  }
+
+  document.getElementById('add-spec').value = mergeSpecWithBarcode(document.getElementById('add-spec').value, code);
+  document.getElementById('add-name').focus();
+  if (hadNetworkError) {
+    showLookupCard('没能连接商品数据库', '已保留条码 '+code+'。这通常是网络、Safari 隐私限制或数据库临时不可达导致。你仍然可以手动填写并保存，下次扫这个条码会直接打开本地库存项。');
+  } else {
+    showLookupCard('公开数据库没有收录', '已保留条码 '+code+'。请手动填写名称、品牌和规格；保存后，这个条码就会成为你自己的本地识别记录。');
+  }
+}
+
+async function fetchProductInfo(url) {
+  const controller = new AbortController();
+  const timer = setTimeout(()=>controller.abort(), 10000);
+  try {
+    const res = await fetch(url, { signal: controller.signal, mode: 'cors', cache: 'no-store' });
+    if (!res.ok) return null;
+    return await res.json();
+  } finally {
+    clearTimeout(timer);
   }
 }
 
