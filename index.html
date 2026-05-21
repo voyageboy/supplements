@@ -2,436 +2,656 @@
 <html lang="zh-CN">
 <head>
 <meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>补剂库存管理</title>
 <style>
-  @import url('https://fonts.googleapis.com/css2?family=DM+Mono:wght@400;500&family=Sora:wght@300;400;600;700&display=swap');
-
   :root {
-    --bg: #0e0f11;
-    --surface: #16181c;
-    --surface2: #1e2128;
-    --border: #2a2d35;
+    --bg: #0d0f12;
+    --panel: #171a20;
+    --panel-2: #20242c;
+    --panel-3: #12151a;
+    --border: #313642;
+    --text: #f1f4f8;
+    --muted: #8a92a3;
+    --dim: #596170;
     --accent: #c8f060;
-    --accent2: #60c8f0;
-    --warn: #f0a060;
-    --danger: #f06060;
-    --text: #e8eaf0;
-    --muted: #6b7080;
-    --radius: 14px;
+    --cyan: #60c8f0;
+    --warn: #f2a45f;
+    --danger: #f05f68;
+    --radius: 10px;
   }
 
   * { box-sizing: border-box; margin: 0; padding: 0; }
-  body { background: var(--bg); color: var(--text); font-family: 'Sora', sans-serif; min-height: 100vh; padding-bottom: 100px; }
+  body {
+    min-height: 100vh;
+    background: var(--bg);
+    color: var(--text);
+    font-family: Inter, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+    letter-spacing: 0;
+  }
+  button, input, select, textarea { font: inherit; }
+  button { cursor: pointer; }
 
-  .header { background: var(--surface); border-bottom: 1px solid var(--border); padding: 20px 20px 16px; position: sticky; top: 0; z-index: 100; }
-  .header-top { display: flex; justify-content: space-between; align-items: center; }
-  .logo { font-size: 18px; font-weight: 700; letter-spacing: -0.5px; }
-  .logo span { color: var(--accent); }
-  .stats-row { display: flex; gap: 10px; }
-  .stat-chip { background: var(--surface2); border: 1px solid var(--border); border-radius: 8px; padding: 6px 12px; font-size: 12px; display: flex; align-items: center; gap: 6px; }
-  .stat-chip .num { font-family: 'DM Mono', monospace; font-size: 14px; font-weight: 500; }
-  .stat-chip.warn .num { color: var(--warn); }
-  .stat-chip.ok .num { color: var(--accent); }
+  .app { min-height: 100vh; padding-bottom: 84px; }
+  .sidebar { display: none; }
+  .topbar {
+    position: sticky;
+    top: 0;
+    z-index: 40;
+    background: rgba(13, 15, 18, 0.92);
+    border-bottom: 1px solid var(--border);
+    backdrop-filter: blur(16px);
+    padding: 20px;
+  }
+  .topbar-row { display: flex; align-items: center; justify-content: space-between; gap: 12px; }
+  .brand { font-size: 22px; font-weight: 800; }
+  .subtitle { margin-top: 6px; font-size: 12px; color: var(--muted); }
+  .stat-strip { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 8px; margin-top: 16px; }
+  .stat { border: 1px solid var(--border); background: var(--panel); border-radius: var(--radius); padding: 10px 12px; }
+  .stat span { display: block; color: var(--muted); font-size: 10px; font-weight: 700; text-transform: uppercase; }
+  .stat strong { display: block; margin-top: 4px; font-size: 20px; line-height: 1; }
+  .stat.warn strong { color: var(--warn); }
+  .stat.ok strong { color: var(--accent); }
 
-  .page { display: none; padding: 16px 20px; }
+  .content { padding: 18px 20px; max-width: 1180px; margin: 0 auto; }
+  .page { display: none; }
   .page.active { display: block; }
+  .page-head { display: none; }
+  .section { margin-top: 18px; }
+  .section-title {
+    color: var(--muted);
+    font-size: 11px;
+    font-weight: 800;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    margin: 0 0 10px;
+  }
 
-  .section-title { font-size: 11px; font-weight: 600; letter-spacing: 1.5px; text-transform: uppercase; color: var(--muted); margin-bottom: 12px; margin-top: 20px; }
-  .section-title:first-child { margin-top: 4px; }
+  .toolbar { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; }
+  .filter-row { display: flex; gap: 8px; overflow-x: auto; scrollbar-width: none; margin-bottom: 14px; padding-bottom: 2px; }
+  .filter-row::-webkit-scrollbar { display: none; }
+  .chip {
+    flex: 0 0 auto;
+    border: 1px solid var(--border);
+    background: var(--panel-2);
+    color: var(--muted);
+    border-radius: 8px;
+    padding: 8px 12px;
+    font-size: 12px;
+    font-weight: 800;
+  }
+  .chip.active { background: var(--accent); border-color: var(--accent); color: var(--bg); }
 
-  .alert-banner { background: linear-gradient(135deg, #2a1a0a, #1e1208); border: 1px solid var(--warn); border-radius: var(--radius); padding: 14px 16px; margin-bottom: 16px; display: flex; align-items: center; gap: 10px; font-size: 13px; }
-  .alert-banner strong { color: var(--warn); }
+  .alert {
+    display: none;
+    border: 1px solid var(--warn);
+    border-left-width: 4px;
+    background: #312316;
+    border-radius: var(--radius);
+    padding: 12px 14px;
+    margin-bottom: 14px;
+    font-size: 13px;
+    font-weight: 700;
+  }
+  .alert.show { display: block; }
 
-  .supp-card { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius); padding: 14px 16px; margin-bottom: 10px; display: flex; align-items: center; gap: 12px; cursor: pointer; transition: border-color 0.2s; }
-  .supp-card.warn { border-color: #3a2010; background: linear-gradient(135deg, #1e1610, #16181c); }
-  .supp-card.critical { border-color: var(--danger); background: linear-gradient(135deg, #2a1010, #16181c); }
-  .supp-card.plenty { opacity: 0.65; }
+  .category-mark {
+    width: 34px;
+    height: 34px;
+    border: 1px solid currentColor;
+    border-radius: 8px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    background: var(--panel-2);
+    font-size: 12px;
+    font-weight: 900;
+    flex: 0 0 auto;
+  }
 
-  .supp-icon { width: 44px; height: 44px; border-radius: 10px; background: var(--surface2); display: flex; align-items: center; justify-content: center; font-size: 20px; flex-shrink: 0; }
-  .supp-info { flex: 1; min-width: 0; }
-  .supp-name { font-size: 14px; font-weight: 600; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; margin-bottom: 3px; }
-  .supp-meta { font-size: 11px; color: var(--muted); font-family: 'DM Mono', monospace; }
-  .supp-right { text-align: right; flex-shrink: 0; }
-  .supp-stock { font-family: 'DM Mono', monospace; font-size: 28px; font-weight: 600; line-height: 1; margin-bottom: 2px; }
-  .supp-stock.critical { color: var(--danger); }
-  .supp-stock.warn { color: var(--warn); }
-  .supp-stock.ok { color: var(--accent); }
-  .supp-stock.plenty { color: var(--muted); }
-  .supp-unit { font-size: 11px; color: var(--muted); }
+  .inventory-header { display: none; }
+  .inventory-list { display: grid; gap: 10px; }
+  .item-row {
+    border: 1px solid var(--border);
+    background: var(--panel);
+    border-radius: var(--radius);
+    padding: 14px;
+    display: grid;
+    grid-template-columns: auto minmax(0, 1fr) auto;
+    gap: 12px;
+    align-items: center;
+    width: 100%;
+    color: var(--text);
+    text-align: left;
+    font: inherit;
+  }
+  .item-row.warn { background: #312316; border-color: var(--warn); }
+  .item-row.critical { background: #32191b; border-color: var(--danger); }
+  .item-row.plenty { opacity: 0.72; }
+  .item-title { font-size: 15px; font-weight: 800; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .item-meta { color: var(--muted); font-size: 11px; margin-top: 5px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .stock-cell { text-align: right; min-width: 54px; }
+  .stock-num { font-size: 28px; line-height: 1; font-weight: 900; color: var(--accent); }
+  .warn .stock-num { color: var(--warn); }
+  .critical .stock-num { color: var(--danger); }
+  .plenty .stock-num { color: var(--muted); }
+  .stock-unit { color: var(--muted); font-size: 11px; margin-top: 3px; }
+  .status-bar { height: 10px; width: 46px; border-radius: 999px; background: var(--accent); margin: 7px 0 0 auto; }
+  .warn .status-bar { background: var(--warn); }
+  .critical .status-bar { background: var(--danger); }
+  .plenty .status-bar { background: var(--dim); }
 
-  .scan-area { background: var(--surface); border: 2px dashed var(--border); border-radius: var(--radius); padding: 28px 20px; text-align: center; margin-bottom: 16px; }
-  .scan-btn { display: inline-flex; align-items: center; gap: 10px; background: var(--accent); color: #0e0f11; border: none; border-radius: 12px; padding: 13px 26px; font-size: 15px; font-weight: 700; font-family: 'Sora', sans-serif; cursor: pointer; }
-  .scan-hint { font-size: 12px; color: var(--muted); margin-top: 10px; line-height: 1.6; }
+  .panel {
+    background: var(--panel);
+    border: 1px solid var(--border);
+    border-radius: 14px;
+    padding: 16px;
+  }
+  .panel + .panel { margin-top: 14px; }
+  .panel-title { font-size: 15px; font-weight: 850; margin-bottom: 8px; }
+  .panel-note { color: var(--muted); font-size: 12px; line-height: 1.5; }
+  .grid-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+  .form-grid { display: grid; gap: 12px; }
+  .field label { display: block; margin-bottom: 6px; color: var(--muted); font-size: 11px; font-weight: 800; text-transform: uppercase; letter-spacing: 0.08em; }
+  input, select, textarea {
+    width: 100%;
+    border: 1px solid var(--border);
+    background: var(--panel-3);
+    color: var(--text);
+    border-radius: var(--radius);
+    outline: none;
+  }
+  input, select { height: 42px; padding: 0 12px; }
+  textarea { min-height: 104px; resize: vertical; padding: 11px 12px; line-height: 1.5; }
+  input:focus, select:focus, textarea:focus { border-color: var(--cyan); }
 
-  #scanner-container { position: relative; border-radius: var(--radius); overflow: hidden; background: #000; margin-bottom: 16px; display: none; }
-  #scanner-container video, #scanner-container canvas { width: 100% !important; height: auto !important; display: block; }
+  .btn {
+    border: 1px solid var(--border);
+    background: var(--panel-2);
+    color: var(--text);
+    border-radius: var(--radius);
+    min-height: 40px;
+    padding: 0 14px;
+    font-size: 13px;
+    font-weight: 850;
+  }
+  .btn.primary { background: var(--accent); border-color: var(--accent); color: var(--bg); }
+  .btn.cyan { border-color: var(--cyan); color: var(--cyan); }
+  .btn.warn { border-color: var(--warn); color: var(--warn); }
+  .btn.danger { border-color: var(--danger); color: var(--danger); }
+  .btn.full { width: 100%; }
+
+  .scan-area {
+    border: 1px dashed var(--border);
+    background: var(--panel);
+    border-radius: 14px;
+    padding: 16px;
+  }
+  .scan-visual {
+    height: 72px;
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    background: repeating-linear-gradient(90deg, var(--panel-2) 0 4px, transparent 4px 9px);
+    opacity: 0.8;
+    margin-bottom: 12px;
+  }
+  #scanner-container { display: none; position: relative; overflow: hidden; border-radius: 14px; background: #000; margin-top: 12px; }
   #scanner-video { width: 100%; display: block; }
-  .scan-overlay { position: absolute; inset: 0; display: flex; align-items: center; justify-content: center; pointer-events: none; }
-  .scan-frame { width: 240px; height: 120px; border: 2px solid var(--accent); border-radius: 8px; box-shadow: 0 0 0 2000px rgba(0,0,0,0.4); position: relative; overflow: hidden; }
-  .scan-line { position: absolute; width: 100%; height: 2px; background: var(--accent); animation: scanline 2s ease-in-out infinite; }
-  @keyframes scanline { 0%,100% { top:10%; opacity:.8; } 50% { top:85%; opacity:1; } }
-  .stop-scan-btn { width: 100%; padding: 12px; background: var(--surface2); border: 1px solid var(--border); border-radius: 10px; color: var(--muted); font-size: 13px; font-weight: 600; cursor: pointer; font-family: 'Sora', sans-serif; margin-bottom: 16px; }
-  .lookup-card { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius); padding: 14px 16px; margin-bottom: 16px; display: none; }
-  .lookup-card.show { display: block; }
-  .lookup-title { font-size: 13px; font-weight: 700; margin-bottom: 6px; }
-  .lookup-text { font-size: 12px; color: var(--muted); line-height: 1.6; }
-  .toolbar { display: flex; gap: 8px; margin-top: 12px; }
-  .btn-secondary { flex: 1; padding: 12px; background: var(--surface2); color: var(--text); border: 1px solid var(--border); border-radius: 10px; font-size: 13px; font-weight: 600; cursor: pointer; font-family: 'Sora', sans-serif; }
-  .btn-secondary.accent { border-color: var(--accent); color: var(--accent); }
-  .btn-secondary.warn { border-color: var(--warn); color: var(--warn); }
+  .scan-overlay { position: absolute; inset: 0; display: grid; place-items: center; pointer-events: none; }
+  .scan-frame { width: 240px; height: 110px; border: 2px solid var(--accent); border-radius: 8px; box-shadow: 0 0 0 2000px rgba(0,0,0,.38); }
 
-  .divider { display: flex; align-items: center; gap: 12px; margin: 20px 0; color: var(--muted); font-size: 12px; }
-  .divider::before, .divider::after { content: ''; flex: 1; height: 1px; background: var(--border); }
+  .category-list { display: grid; gap: 10px; }
+  .category-row {
+    display: grid;
+    grid-template-columns: auto minmax(0, 1fr) auto;
+    align-items: center;
+    gap: 12px;
+    background: var(--panel-2);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    padding: 10px 12px;
+  }
+  .category-name { font-size: 14px; font-weight: 800; }
+  .category-sub { color: var(--muted); font-size: 11px; margin-top: 3px; }
 
-  .input-group { margin-bottom: 12px; }
-  .input-label { font-size: 11px; font-weight: 600; color: var(--muted); letter-spacing: 1px; text-transform: uppercase; margin-bottom: 6px; display: block; }
-  input, select { width: 100%; background: var(--surface); border: 1px solid var(--border); border-radius: 10px; padding: 11px 14px; color: var(--text); font-size: 14px; font-family: 'Sora', sans-serif; outline: none; transition: border-color 0.2s; -webkit-appearance: none; }
-  textarea { width: 100%; min-height: 118px; resize: vertical; background: var(--surface); border: 1px solid var(--border); border-radius: 10px; padding: 11px 14px; color: var(--text); font-size: 13px; line-height: 1.5; font-family: 'Sora', sans-serif; outline: none; transition: border-color 0.2s; }
-  input:focus, select:focus { border-color: var(--accent2); }
-  textarea:focus { border-color: var(--accent2); }
-  .row-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+  .bottom-nav {
+    position: fixed;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    z-index: 50;
+    display: grid;
+    grid-template-columns: repeat(5, 1fr);
+    gap: 4px;
+    background: var(--panel);
+    border-top: 1px solid var(--border);
+    padding: 8px 8px 18px;
+  }
+  .nav-item {
+    border: 1px solid transparent;
+    background: transparent;
+    color: var(--muted);
+    border-radius: 8px;
+    padding: 8px 2px;
+    font-size: 11px;
+    font-weight: 850;
+  }
+  .nav-item::before {
+    content: "";
+    display: block;
+    height: 3px;
+    width: 34px;
+    border-radius: 999px;
+    background: var(--dim);
+    margin: 0 auto 7px;
+  }
+  .nav-item.active { color: var(--accent); background: #1d251a; border-color: var(--accent); }
+  .nav-item.active::before { background: var(--accent); }
 
-  .btn-primary { width: 100%; padding: 14px; background: var(--accent); color: #0e0f11; border: none; border-radius: 12px; font-size: 15px; font-weight: 700; font-family: 'Sora', sans-serif; cursor: pointer; margin-top: 8px; }
-
-  .bottom-nav { position: fixed; bottom: 0; left: 0; right: 0; background: var(--surface); border-top: 1px solid var(--border); display: flex; padding: 10px 0 20px; z-index: 100; }
-  .nav-item { flex: 1; display: flex; flex-direction: column; align-items: center; gap: 4px; cursor: pointer; padding: 4px 0; border: none; background: transparent; color: var(--muted); font-family: 'Sora', sans-serif; font-size: 10px; font-weight: 600; }
-  .nav-item .nav-icon { font-size: 22px; line-height: 1; }
-  .nav-item.active { color: var(--accent); }
-
-  /* Modal */
-  .modal-overlay { position: fixed; inset: 0; background: rgba(0,0,0,0.7); z-index: 200; display: none; align-items: flex-end; justify-content: center; }
+  .modal-overlay {
+    position: fixed;
+    inset: 0;
+    z-index: 100;
+    display: none;
+    background: rgba(0,0,0,.72);
+    align-items: flex-end;
+    justify-content: center;
+  }
   .modal-overlay.show { display: flex; }
-  .modal { background: var(--surface); border-radius: 20px 20px 0 0; padding: 24px 20px 40px; width: 100%; max-width: 480px; border-top: 1px solid var(--border); max-height: 90vh; overflow-y: auto; }
-  .modal-title { font-size: 16px; font-weight: 700; margin-bottom: 4px; }
-  .modal-sub { font-size: 11px; color: var(--muted); margin-bottom: 16px; font-family: 'DM Mono', monospace; line-height: 1.5; }
-
-  /* Modal tabs */
-  .modal-tabs { display: flex; border-bottom: 1px solid var(--border); margin-bottom: 18px; }
-  .modal-tab { flex: 1; padding: 10px; text-align: center; font-size: 13px; font-weight: 600; color: var(--muted); cursor: pointer; border: none; background: none; border-bottom: 2px solid transparent; font-family: 'Sora', sans-serif; }
-  .modal-tab.active { color: var(--accent); border-bottom-color: var(--accent); }
-  .modal-tab-content { display: none; }
-  .modal-tab-content.active { display: block; }
-
-  /* Stock display */
-  .stock-display { display: flex; align-items: center; justify-content: center; gap: 20px; padding: 20px 0 8px; }
-  .stock-big { font-family: 'DM Mono', monospace; font-size: 52px; font-weight: 600; line-height: 1; }
-  .stock-big.critical { color: var(--danger); }
+  .modal {
+    width: 100%;
+    max-width: 520px;
+    max-height: 92vh;
+    overflow: auto;
+    background: var(--panel);
+    border: 1px solid var(--border);
+    border-radius: 20px 20px 0 0;
+    padding: 20px;
+  }
+  .modal-title { font-size: 18px; font-weight: 900; }
+  .modal-sub { color: var(--muted); font-size: 12px; margin-top: 6px; line-height: 1.45; }
+  .stock-control { display: grid; grid-template-columns: 56px 1fr 56px; gap: 14px; align-items: center; margin: 18px 0; }
+  .round-btn { height: 56px; border-radius: 50%; border: 1px solid var(--border); background: var(--panel-2); color: var(--text); font-size: 26px; }
+  .stock-big { text-align: center; font-size: 54px; font-weight: 950; line-height: 1; color: var(--accent); }
   .stock-big.warn { color: var(--warn); }
-  .stock-big.ok { color: var(--accent); }
+  .stock-big.critical { color: var(--danger); }
   .stock-big.plenty { color: var(--muted); }
-  .adj-btn { width: 48px; height: 48px; border-radius: 50%; border: 2px solid var(--border); background: var(--surface2); color: var(--text); font-size: 26px; cursor: pointer; display: flex; align-items: center; justify-content: center; }
-  .adj-btn:active { transform: scale(0.9); }
 
-  .btn-row { display: flex; gap: 8px; margin-top: 8px; }
-  .btn-outline { flex: 1; padding: 11px; background: var(--surface2); color: var(--text); border: 1px solid var(--border); border-radius: 10px; font-size: 13px; font-weight: 600; cursor: pointer; font-family: 'Sora', sans-serif; }
-  .btn-fill { flex: 1; padding: 11px; background: var(--accent); color: #0e0f11; border: none; border-radius: 10px; font-size: 13px; font-weight: 700; cursor: pointer; font-family: 'Sora', sans-serif; }
-  .btn-danger-full { width: 100%; padding: 12px; background: transparent; color: var(--danger); border: 1px solid var(--danger); border-radius: 10px; font-size: 13px; font-weight: 600; cursor: pointer; font-family: 'Sora', sans-serif; margin-top: 16px; }
-
-  .toast { position: fixed; bottom: 90px; left: 50%; transform: translateX(-50%) translateY(20px); background: var(--surface2); border: 1px solid var(--border); border-radius: 10px; padding: 12px 20px; font-size: 13px; font-weight: 600; opacity: 0; transition: all 0.3s; z-index: 999; white-space: nowrap; }
+  .toast {
+    position: fixed;
+    left: 50%;
+    bottom: 92px;
+    z-index: 200;
+    transform: translateX(-50%) translateY(20px);
+    opacity: 0;
+    pointer-events: none;
+    background: var(--panel-2);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    padding: 11px 16px;
+    font-size: 13px;
+    font-weight: 800;
+    max-width: calc(100vw - 32px);
+    white-space: nowrap;
+    transition: all .22s ease;
+  }
   .toast.show { opacity: 1; transform: translateX(-50%) translateY(0); }
   .toast.success { border-color: var(--accent); color: var(--accent); }
   .toast.error { border-color: var(--danger); color: var(--danger); }
-  .toast.info { border-color: var(--accent2); color: var(--accent2); }
+  .toast.info { border-color: var(--cyan); color: var(--cyan); }
 
-  .filter-row { display: flex; gap: 8px; overflow-x: auto; padding-bottom: 4px; margin-bottom: 14px; scrollbar-width: none; }
-  .filter-row::-webkit-scrollbar { display: none; }
-  .filter-chip { flex-shrink: 0; padding: 6px 14px; border-radius: 20px; border: 1px solid var(--border); background: var(--surface2); color: var(--muted); font-size: 12px; font-weight: 600; cursor: pointer; white-space: nowrap; }
-  .filter-chip.active { background: var(--accent); color: #0e0f11; border-color: var(--accent); }
+  .empty { color: var(--muted); border: 1px dashed var(--border); border-radius: 14px; padding: 34px 18px; text-align: center; font-size: 13px; }
+  .hidden-file { display: none; }
 
-  .empty-state { text-align: center; padding: 60px 20px; color: var(--muted); }
-  .empty-state .emoji { font-size: 48px; margin-bottom: 16px; }
-  .empty-state p { font-size: 14px; line-height: 1.6; }
-  .settings-card { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius); padding: 14px 16px; margin-top: 18px; }
-  .settings-card p { color: var(--muted); font-size: 12px; line-height: 1.6; margin-top: 6px; }
+  @media (min-width: 860px) {
+    body { overflow-y: scroll; }
+    .app { display: grid; grid-template-columns: 248px minmax(0, 1fr); padding-bottom: 0; }
+    .sidebar {
+      display: block;
+      position: sticky;
+      top: 0;
+      height: 100vh;
+      background: var(--panel);
+      border-right: 1px solid var(--border);
+      padding: 28px;
+    }
+    .sidebar .brand { margin-bottom: 6px; }
+    .side-nav { display: grid; gap: 10px; margin-top: 36px; }
+    .side-item {
+      border: 1px solid transparent;
+      background: transparent;
+      color: var(--muted);
+      border-radius: 8px;
+      height: 42px;
+      padding: 0 14px;
+      text-align: left;
+      font-weight: 850;
+    }
+    .side-item::before {
+      content: "";
+      display: inline-block;
+      width: 3px;
+      height: 18px;
+      margin-right: 12px;
+      border-radius: 99px;
+      background: var(--dim);
+      vertical-align: -4px;
+    }
+    .side-item.active { color: var(--accent); background: #1d251a; border-color: var(--accent); }
+    .side-item.active::before { background: var(--accent); }
+    .topbar { position: static; background: transparent; border-bottom: 0; padding: 28px 36px 0; }
+    .topbar .brand, .topbar .subtitle { display: none; }
+    .stat-strip { grid-template-columns: repeat(4, 138px); margin-top: 0; }
+    .content { margin: 0; padding: 24px 36px 48px; }
+    .page-head { display: flex; align-items: flex-end; justify-content: space-between; gap: 16px; margin-bottom: 22px; }
+    .page-head h1 { font-size: 28px; }
+    .page-head p { color: var(--muted); font-size: 13px; margin-top: 6px; }
+    .bottom-nav { display: none; }
+    .inventory-header {
+      display: grid;
+      grid-template-columns: 250px 170px 130px 90px 90px 60px;
+      gap: 14px;
+      color: var(--muted);
+      font-size: 11px;
+      font-weight: 850;
+      text-transform: uppercase;
+      letter-spacing: .08em;
+      padding: 0 18px 8px;
+    }
+    .inventory-list { gap: 8px; }
+    .item-row {
+      grid-template-columns: 250px 170px 130px 90px 90px 60px;
+      gap: 14px;
+      padding: 12px 18px;
+      min-height: 58px;
+    }
+    .item-row .category-mark { width: 34px; height: 34px; }
+    .item-info { display: contents; }
+    .item-title { align-self: center; }
+    .item-meta { align-self: center; margin: 0; }
+    .desktop-category { display: flex; align-items: center; gap: 10px; }
+    .desktop-status { display: flex; align-items: center; gap: 9px; color: var(--muted); font-size: 12px; font-weight: 800; align-self: center; }
+    .desktop-status::before { content: ""; width: 10px; height: 10px; border-radius: 50%; background: var(--accent); }
+    .warn .desktop-status::before { background: var(--warn); }
+    .critical .desktop-status::before { background: var(--danger); }
+    .plenty .desktop-status::before { background: var(--dim); }
+    .stock-cell { text-align: left; align-self: center; }
+    .stock-num { font-size: 20px; display: inline; }
+    .stock-unit { display: inline; margin-left: 4px; }
+    .status-bar { display: none; }
+    .mobile-only { display: none !important; }
+    .desktop-only { display: initial !important; }
+    .modal-overlay { align-items: center; }
+    .modal { border-radius: 18px; }
+    .form-grid.desktop-two { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+    .form-grid.desktop-three { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+  }
 
-  select option { background: var(--surface2); }
+  @media (max-width: 859px) {
+    .desktop-only { display: none !important; }
+  }
 </style>
 </head>
 <body>
+<div class="app">
+  <aside class="sidebar">
+    <div class="brand">补剂库存</div>
+    <div class="subtitle">iHerb Inventory</div>
+    <div class="side-nav" id="side-nav"></div>
+  </aside>
 
-<div class="header">
-  <div class="header-top">
-    <div class="logo">补剂<span>库存</span></div>
-    <div class="stats-row">
-      <div class="stat-chip ok"><span>总计</span><span class="num" id="total-count">0</span></div>
-      <div class="stat-chip warn"><span>⚠️ 补货</span><span class="num" id="warn-count">0</span></div>
+  <main>
+    <header class="topbar">
+      <div class="topbar-row">
+        <div>
+          <div class="brand">补剂库存</div>
+          <div class="subtitle" id="mobile-subtitle">库存工作台</div>
+        </div>
+      </div>
+      <div class="stat-strip">
+        <div class="stat ok"><span>总计</span><strong id="stat-total">0</strong></div>
+        <div class="stat warn"><span>低库存</span><strong id="stat-low">0</strong></div>
+        <div class="stat"><span>条码</span><strong id="stat-barcodes">0</strong></div>
+        <div class="stat"><span>分类</span><strong id="stat-categories">0</strong></div>
+      </div>
+    </header>
+
+    <div class="content">
+      <section class="page active" id="page-home">
+        <div class="page-head">
+          <div><h1>库存工作台</h1><p>搜索、筛选和编辑当前补剂库存。</p></div>
+          <button class="btn primary" onclick="showPage('add')">新增</button>
+        </div>
+        <div class="alert" id="alert-section"></div>
+        <div class="toolbar section">
+          <input id="search-input" type="search" placeholder="搜索名称 / 品牌 / 条码 / iHerb 编号" oninput="renderInventory()" />
+        </div>
+        <div class="filter-row section" id="filter-row"></div>
+        <div class="inventory-header">
+          <div>名称</div><div>品牌</div><div>分类</div><div>库存</div><div>状态</div><div></div>
+        </div>
+        <div id="inventory-list" class="inventory-list"></div>
+      </section>
+
+      <section class="page" id="page-add">
+        <div class="page-head">
+          <div><h1>入库</h1><p>扫码、拍照识别，或粘贴 iHerb 信息。</p></div>
+        </div>
+        <div class="scan-area">
+          <div class="scan-visual"></div>
+          <div class="toolbar">
+            <button class="btn primary" onclick="startScan()">扫描条码</button>
+            <button class="btn cyan" onclick="document.getElementById('barcode-photo').click()">拍照识别</button>
+            <button class="btn" id="stop-btn" style="display:none" onclick="stopScan()">停止</button>
+          </div>
+          <input id="barcode-photo" class="hidden-file" type="file" accept="image/*" capture="environment" onchange="scanBarcodeImage(event)">
+          <div id="scanner-container">
+            <video id="scanner-video" autoplay muted playsinline></video>
+            <div class="scan-overlay"><div class="scan-frame"></div></div>
+          </div>
+        </div>
+
+        <div class="panel section" id="lookup-card" style="display:none">
+          <div class="panel-title" id="lookup-title">条码识别</div>
+          <div class="panel-note" id="lookup-text"></div>
+        </div>
+
+        <div class="panel section">
+          <div class="panel-title">iHerb 导入</div>
+          <div class="form-grid">
+            <div class="field"><label>商品链接</label><input type="url" id="add-iherb-url" placeholder="https://www.iherb.com/pr/..."></div>
+            <div class="field"><label>页面文字 / 商品信息</label><textarea id="iherb-paste" placeholder="粘贴商品标题、UPC、Item # 或订单中的商品信息"></textarea></div>
+            <div class="toolbar">
+              <button class="btn cyan" onclick="parseIherbInfo()">解析并填入</button>
+              <button class="btn" onclick="clearIherbImport()">清空</button>
+            </div>
+          </div>
+        </div>
+
+        <div class="panel section">
+          <div class="panel-title">补剂信息</div>
+          <div class="form-grid desktop-two">
+            <div class="field"><label>条码</label><input type="text" id="add-barcode" inputmode="numeric" placeholder="扫码或手动输入"></div>
+            <div class="field"><label>分类</label><select id="add-category"></select></div>
+            <div class="field"><label>名称</label><input type="text" id="add-name" placeholder="NMN / TMG / Magnesium"></div>
+            <div class="field"><label>品牌</label><input type="text" id="add-brand" placeholder="Life Extension / NOW Foods"></div>
+            <div class="field"><label>规格</label><input type="text" id="add-spec" placeholder="500mg x 120 capsules"></div>
+            <div class="grid-2">
+              <div class="field"><label>库存</label><input type="number" id="add-stock" min="0" value="1"></div>
+              <div class="field"><label>阈值</label><input type="number" id="add-threshold" min="0" value="1"></div>
+            </div>
+            <div class="field"><label>单位</label><select id="add-unit"></select></div>
+          </div>
+          <div class="toolbar section">
+            <button class="btn cyan" onclick="lookupBarcodeFromInput()">查询条码</button>
+            <button class="btn primary" onclick="addSupplement()">添加到库存</button>
+          </div>
+        </div>
+      </section>
+
+      <section class="page" id="page-shopping">
+        <div class="page-head">
+          <div><h1>补货清单</h1><p>库存低于各自阈值的项目。</p></div>
+        </div>
+        <div id="shopping-list" class="inventory-list"></div>
+      </section>
+
+      <section class="page" id="page-categories">
+        <div class="page-head">
+          <div><h1>分类管理</h1><p>用短标和颜色管理分类，不使用图片或 emoji。</p></div>
+        </div>
+        <div class="panel">
+          <div class="form-grid desktop-three">
+            <div class="field"><label>名称</label><input id="cat-name" placeholder="睡眠"></div>
+            <div class="field"><label>短标</label><input id="cat-code" maxlength="4" placeholder="SL"></div>
+            <div class="field"><label>颜色</label><input id="cat-color" type="color" value="#c8f060"></div>
+            <div class="field"><label>默认阈值</label><input id="cat-threshold" type="number" min="0" value="1"></div>
+            <div class="field"><label>删除迁移到</label><select id="cat-replacement"></select></div>
+          </div>
+          <div class="toolbar section">
+            <button class="btn primary" onclick="saveCategory()">保存分类</button>
+            <button class="btn" onclick="newCategory()">新建</button>
+            <button class="btn danger" onclick="deleteCategory()">删除</button>
+          </div>
+        </div>
+        <div class="section category-list" id="category-list"></div>
+      </section>
+
+      <section class="page" id="page-backup">
+        <div class="page-head">
+          <div><h1>备份</h1><p>数据保存在当前浏览器，建议定期导出。</p></div>
+        </div>
+        <div class="panel">
+          <div class="toolbar">
+            <button class="btn primary" onclick="exportData()">导出备份</button>
+            <button class="btn cyan" onclick="document.getElementById('import-file').click()">导入备份</button>
+          </div>
+          <input id="import-file" class="hidden-file" type="file" accept="application/json,.json" onchange="importData(event)">
+        </div>
+      </section>
     </div>
-  </div>
+  </main>
 </div>
 
-<!-- 库存页 -->
-<div class="page active" id="page-home">
-  <div id="alert-section"></div>
-  <div class="filter-row">
-    <div class="filter-chip active" onclick="filterBy('全部',this)">全部</div>
-    <div class="filter-chip" onclick="filterBy('甲基化',this)">甲基化</div>
-    <div class="filter-chip" onclick="filterBy('线粒体',this)">线粒体</div>
-    <div class="filter-chip" onclick="filterBy('抗氧化',this)">抗氧化</div>
-    <div class="filter-chip" onclick="filterBy('肠道',this)">肠道</div>
-    <div class="filter-chip" onclick="filterBy('矿物质',this)">矿物质</div>
-    <div class="filter-chip" onclick="filterBy('其他',this)">其他</div>
-  </div>
-  <div id="inventory-list"></div>
-</div>
+<nav class="bottom-nav" id="bottom-nav"></nav>
 
-<!-- 入库页 -->
-<div class="page" id="page-scan">
-  <div class="section-title">扫码入库</div>
-  <div class="scan-area" id="scan-area">
-    <div style="font-size:44px;margin-bottom:14px">📷</div>
-    <button class="scan-btn" onclick="startScan()"><span>扫描条形码</span></button>
-    <div class="toolbar">
-      <button class="btn-secondary accent" onclick="document.getElementById('barcode-photo').click()">拍照识别条码</button>
-    </div>
-    <input id="barcode-photo" type="file" accept="image/*" capture="environment" style="display:none" onchange="scanBarcodeImage(event)" />
-    <div class="scan-hint">iPhone Safari 如果实时扫码失败，请用“拍照识别条码”</div>
-  </div>
-  <div id="scanner-container">
-    <video id="scanner-video" autoplay muted playsinline></video>
-    <div class="scan-overlay"><div class="scan-frame"><div class="scan-line"></div></div></div>
-  </div>
-  <button class="stop-scan-btn" id="stop-btn" style="display:none" onclick="stopScan()">停止扫描</button>
-  <div class="lookup-card" id="lookup-card">
-    <div class="lookup-title" id="lookup-title">条码识别</div>
-    <div class="lookup-text" id="lookup-text"></div>
-  </div>
-
-  <div class="divider">手动填写</div>
-
-  <div class="lookup-card show">
-    <div class="lookup-title">iHerb 导入助手</div>
-    <div class="lookup-text">粘贴 iHerb 商品链接、商品页复制的文字、订单里的商品名，或包含 UPC/条码的资料，然后点“解析并填入”。</div>
-    <div class="input-group" style="margin-top:12px">
-      <label class="input-label">iHerb 商品链接</label>
-      <input type="url" id="add-iherb-url" placeholder="https://www.iherb.com/pr/..." />
-    </div>
-    <div class="input-group">
-      <label class="input-label">粘贴商品信息</label>
-      <textarea id="iherb-paste" placeholder="例：复制 iHerb 商品标题、品牌、规格、UPC/Barcode/SKU 等信息到这里"></textarea>
-    </div>
-    <div class="toolbar">
-      <button class="btn-secondary accent" onclick="parseIherbInfo()">解析并填入</button>
-      <button class="btn-secondary" onclick="clearIherbImport()">清空</button>
-    </div>
-  </div>
-
-  <div class="input-group">
-    <label class="input-label">条形码</label>
-    <input type="text" id="add-barcode" placeholder="扫码后自动填入，也可手动输入" inputmode="numeric" />
-    <div class="toolbar">
-      <button class="btn-secondary accent" onclick="lookupBarcodeFromInput()">查询商品信息</button>
-      <button class="btn-secondary" onclick="clearBarcode()">清空条码</button>
-    </div>
-  </div>
-
-  <div class="input-group">
-    <label class="input-label">补剂名称 *</label>
-    <input type="text" id="add-name" placeholder="例：NMN、TMG、镁甘氨酸" />
-  </div>
-  <div class="input-group">
-    <label class="input-label">品牌</label>
-    <input type="text" id="add-brand" placeholder="例：Life Extension、NOW Foods" />
-  </div>
-  <div class="input-group">
-    <label class="input-label">分类</label>
-    <select id="add-category">
-      <option value="甲基化">甲基化</option>
-      <option value="线粒体">线粒体</option>
-      <option value="抗氧化">抗氧化</option>
-      <option value="肠道">肠道</option>
-      <option value="矿物质">矿物质</option>
-      <option value="其他" selected>其他</option>
-    </select>
-  </div>
-  <div class="row-2">
-    <div class="input-group">
-      <label class="input-label">当前库存数量</label>
-      <input type="number" id="add-stock" placeholder="例：3" min="0" value="1" />
-    </div>
-    <div class="input-group">
-      <label class="input-label">补货阈值</label>
-      <input type="number" id="add-threshold" placeholder="例：1" min="0" value="1" />
-    </div>
-  </div>
-  <div class="input-group">
-      <label class="input-label">单位</label>
-      <select id="add-unit">
-        <option value="瓶">瓶</option>
-        <option value="罐">罐</option>
-        <option value="袋">袋</option>
-        <option value="盒">盒</option>
-        <option value="支">支</option>
-        <option value="ml">ml</option>
-        <option value="个">个</option>
-      </select>
-  </div>
-  <div class="input-group">
-    <label class="input-label">规格备注</label>
-    <input type="text" id="add-spec" placeholder="例：500mg × 60粒/瓶" />
-  </div>
-  <button class="btn-primary" onclick="addSupplement()">➕ 添加到库存</button>
-</div>
-
-<!-- 补货清单页 -->
-<div class="page" id="page-shopping">
-  <div class="section-title">需要补货（低于各自阈值）</div>
-  <div id="shopping-list"></div>
-
-  <div class="section-title">数据备份</div>
-  <div class="settings-card">
-    <div class="lookup-title">导出 / 导入库存</div>
-    <p>数据保存在当前浏览器。建议偶尔导出备份，换手机或清理浏览器前尤其有用。</p>
-    <div class="toolbar">
-      <button class="btn-secondary accent" onclick="exportData()">导出备份</button>
-      <button class="btn-secondary" onclick="document.getElementById('import-file').click()">导入备份</button>
-    </div>
-    <input id="import-file" type="file" accept="application/json,.json" style="display:none" onchange="importData(event)" />
-  </div>
-</div>
-
-<!-- 底部导航 -->
-<div class="bottom-nav">
-  <button class="nav-item active" onclick="showPage('home',this)">
-    <span class="nav-icon">📦</span><span>库存</span>
-  </button>
-  <button class="nav-item" onclick="showPage('scan',this)">
-    <span class="nav-icon">➕</span><span>入库</span>
-  </button>
-  <button class="nav-item" onclick="showPage('shopping',this)">
-    <span class="nav-icon">🛒</span><span>补货清单</span>
-  </button>
-</div>
-
-<!-- 详情/编辑 Modal -->
-<div class="modal-overlay" id="detail-modal" onclick="closeModal()">
+<div class="modal-overlay" id="item-modal" onclick="closeModal()">
   <div class="modal" onclick="event.stopPropagation()">
     <div class="modal-title" id="modal-name"></div>
     <div class="modal-sub" id="modal-sub"></div>
-
-    <div class="modal-tabs">
-      <button class="modal-tab active" onclick="switchTab('stock')">📦 库存调整</button>
-      <button class="modal-tab" onclick="switchTab('edit')">✏️ 编辑信息</button>
+    <div class="stock-control">
+      <button class="round-btn" onclick="quickAdj(-1)">-</button>
+      <div class="stock-big" id="modal-stock">0</div>
+      <button class="round-btn" onclick="quickAdj(1)">+</button>
     </div>
-
-    <!-- 库存调整 tab -->
-    <div class="modal-tab-content active" id="tab-stock">
-      <div class="stock-display">
-        <button class="adj-btn" onclick="quickAdj(-1)">−</button>
-        <div style="text-align:center">
-          <div class="stock-big" id="modal-stock-num">0</div>
-          <div style="font-size:13px;color:var(--muted);margin-top:4px" id="modal-stock-unit"></div>
-        </div>
-        <button class="adj-btn" onclick="quickAdj(1)">+</button>
-      </div>
-      <div style="font-size:11px;color:var(--muted);text-align:center;margin-bottom:16px">点 +/− 每次调整 1 个包装单位</div>
-
-      <div class="input-group">
-        <label class="input-label">批量入库 / 出库</label>
-        <input type="number" id="modal-adjust" placeholder="输入数量" min="1" />
-      </div>
-      <div class="btn-row">
-        <button class="btn-outline" onclick="adjustStock(-1)">− 出库</button>
-        <button class="btn-fill" onclick="adjustStock(1)">+ 入库</button>
-      </div>
-      <button class="btn-danger-full" onclick="deleteItem()">删除此补剂</button>
+    <div class="form-grid desktop-two">
+      <div class="field"><label>名称</label><input id="edit-name"></div>
+      <div class="field"><label>品牌</label><input id="edit-brand"></div>
+      <div class="field"><label>分类</label><select id="edit-category"></select></div>
+      <div class="field"><label>单位</label><select id="edit-unit"></select></div>
+      <div class="field"><label>规格</label><input id="edit-spec"></div>
+      <div class="field"><label>条码</label><input id="edit-barcode"></div>
+      <div class="field"><label>库存</label><input type="number" id="edit-stock" min="0"></div>
+      <div class="field"><label>阈值</label><input type="number" id="edit-threshold" min="0"></div>
+      <div class="field"><label>iHerb 链接</label><input type="url" id="edit-iherb-url"></div>
     </div>
-
-    <!-- 编辑信息 tab -->
-    <div class="modal-tab-content" id="tab-edit">
-      <div class="input-group">
-        <label class="input-label">补剂名称</label>
-        <input type="text" id="edit-name" />
-      </div>
-      <div class="input-group">
-        <label class="input-label">品牌</label>
-        <input type="text" id="edit-brand" />
-      </div>
-      <div class="input-group">
-        <label class="input-label">分类</label>
-        <select id="edit-category">
-          <option value="甲基化">甲基化</option>
-          <option value="线粒体">线粒体</option>
-          <option value="抗氧化">抗氧化</option>
-          <option value="肠道">肠道</option>
-          <option value="矿物质">矿物质</option>
-          <option value="其他">其他</option>
-        </select>
-      </div>
-      <div class="input-group">
-        <label class="input-label">单位</label>
-        <select id="edit-unit">
-          <option value="瓶">瓶</option>
-          <option value="罐">罐</option>
-          <option value="袋">袋</option>
-          <option value="盒">盒</option>
-          <option value="支">支</option>
-          <option value="ml">ml</option>
-          <option value="个">个</option>
-        </select>
-      </div>
-      <div class="input-group">
-        <label class="input-label">补货阈值</label>
-        <input type="number" id="edit-threshold" min="0" />
-      </div>
-      <div class="input-group">
-        <label class="input-label">规格备注</label>
-        <input type="text" id="edit-spec" placeholder="例：500mg × 60粒/瓶" />
-      </div>
-      <button class="btn-primary" onclick="saveEdit()">💾 保存修改</button>
+    <div class="toolbar section">
+      <button class="btn primary" onclick="saveItemEdit()">保存</button>
+      <button class="btn danger" onclick="deleteItem()">删除</button>
+      <button class="btn" onclick="closeModal()">关闭</button>
     </div>
-
   </div>
 </div>
 
 <div class="toast" id="toast"></div>
 
 <script>
-let inventory = safeParseInventory(localStorage.getItem('supp_inventory'));
-let currentFilter = '全部';
+const STORAGE_ITEMS = 'supp_inventory';
+const STORAGE_CATEGORIES = 'supp_categories';
+const UNITS = ['瓶','罐','袋','盒','支','ml','个'];
+const BARCODE_FORMATS = ['ean_13','ean_8','upc_a','upc_e','code_128','code_39'];
+const ZXING_CDN = 'https://unpkg.com/@zxing/browser@0.2.0/umd/zxing-browser.min.js';
+
+let categories = loadCategories();
+let inventory = loadInventory();
+let currentPage = 'home';
+let currentFilter = 'all';
 let activeItemId = null;
+let activeCategoryId = null;
 let scanStream = null;
 let scanTimer = null;
 let barcodeDetector = null;
 let zxingControls = null;
 let zxingLoading = null;
 
-const CATEGORY_ICONS = { '甲基化':'🧬', '线粒体':'⚡', '抗氧化':'🛡️', '肠道':'🌿', '矿物质':'💎', '其他':'💊' };
-const UNITS = ['瓶','罐','袋','盒','支','ml','个'];
-const BARCODE_FORMATS = ['ean_13','ean_8','upc_a','upc_e','code_128','code_39'];
-const ZXING_CDN = 'https://unpkg.com/@zxing/browser@0.2.0/umd/zxing-browser.min.js';
+const NAV = [
+  ['home','库存'],
+  ['add','入库'],
+  ['shopping','补货'],
+  ['categories','分类'],
+  ['backup','备份']
+];
 
-function safeParseInventory(raw) {
-  try {
-    const parsed = JSON.parse(raw || '[]');
-    return Array.isArray(parsed) ? parsed : [];
-  } catch(e) {
-    return [];
-  }
+function safeParse(raw, fallback) {
+  try { const value = JSON.parse(raw || ''); return value ?? fallback; }
+  catch(e) { return fallback; }
 }
 
-function makeId() {
-  return Date.now().toString(36) + Math.random().toString(36).slice(2, 8);
+function defaultCategories() {
+  return [
+    { id:'methyl', name:'甲基化', code:'MT', color:'#c8f060', threshold:1 },
+    { id:'mito', name:'线粒体', code:'EN', color:'#60c8f0', threshold:1 },
+    { id:'antiox', name:'抗氧化', code:'AO', color:'#9ca3ff', threshold:1 },
+    { id:'gut', name:'肠道', code:'GT', color:'#7dd98a', threshold:1 },
+    { id:'mineral', name:'矿物质', code:'MN', color:'#f2a45f', threshold:1 },
+    { id:'other', name:'其他', code:'OT', color:'#8a92a3', threshold:1, locked:true }
+  ];
 }
 
-function escapeHTML(value) {
-  return String(value ?? '').replace(/[&<>"']/g, ch => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[ch]));
+function loadCategories() {
+  const saved = safeParse(localStorage.getItem(STORAGE_CATEGORIES), null);
+  const list = Array.isArray(saved) && saved.length ? saved : defaultCategories();
+  return list.map(normalizeCategory);
 }
 
-function escapeAttr(value) {
-  return escapeHTML(value).replace(/`/g, '&#96;');
+function loadInventory() {
+  const raw = safeParse(localStorage.getItem(STORAGE_ITEMS), []);
+  return (Array.isArray(raw) ? raw : []).map(normalizeItem).filter(item => item.name);
+}
+
+function makeId(prefix='id') {
+  return prefix + '-' + Date.now().toString(36) + Math.random().toString(36).slice(2, 7);
+}
+
+function normalizeCategory(cat) {
+  const name = String(cat.name || '其他').trim();
+  return {
+    id: String(cat.id || makeId('cat')),
+    name,
+    code: String(cat.code || name.slice(0,2) || 'OT').trim().toUpperCase().slice(0,4),
+    color: /^#[0-9a-f]{6}$/i.test(cat.color || '') ? cat.color : '#8a92a3',
+    threshold: Math.max(0, parseInt(cat.threshold ?? 1) || 0),
+    locked: !!cat.locked
+  };
+}
+
+function categoryByName(name) {
+  return categories.find(cat => cat.name === name) || categories.find(cat => cat.id === name);
+}
+
+function categoryById(id) {
+  return categories.find(cat => cat.id === id) || categories.find(cat => cat.id === 'other') || categories[0];
 }
 
 function normalizeItem(item) {
-  const stock = parseInt(item.stock);
-  const threshold = parseInt(item.threshold);
+  const category = item.categoryId ? categoryById(item.categoryId) : categoryByName(item.category) || categoryById('other');
   return {
-    id: String(item.id || makeId()),
+    id: String(item.id || makeId('item')),
     name: String(item.name || '').trim(),
     brand: String(item.brand || '').trim(),
-    category: CATEGORY_ICONS[item.category] ? item.category : '其他',
-    stock: isNaN(stock) || stock < 0 ? 0 : stock,
-    threshold: isNaN(threshold) || threshold < 0 ? 1 : threshold,
+    categoryId: category.id,
+    stock: Math.max(0, parseInt(item.stock ?? 0) || 0),
+    threshold: Math.max(0, parseInt(item.threshold ?? category.threshold ?? 1) || 0),
     unit: UNITS.includes(item.unit) ? item.unit : '瓶',
     spec: String(item.spec || '').trim(),
     barcode: String(item.barcode || '').trim(),
@@ -440,274 +660,356 @@ function normalizeItem(item) {
   };
 }
 
-function save() { localStorage.setItem('supp_inventory', JSON.stringify(inventory)); }
+function saveAll() {
+  localStorage.setItem(STORAGE_ITEMS, JSON.stringify(inventory));
+  localStorage.setItem(STORAGE_CATEGORIES, JSON.stringify(categories));
+}
 
-// 状态逻辑：基于包装数量
-// 0 = critical（红）, 低于/等于阈值 = warn（橙）, 阈值以上 = ok, 5+ 且明显超过阈值 = plenty（灰）
+function escapeHTML(value) {
+  return String(value ?? '').replace(/[&<>"']/g, ch => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[ch]));
+}
+
 function getStatus(item) {
   if (item.stock === 0) return 'critical';
-  const threshold = Number.isFinite(item.threshold) ? item.threshold : 1;
-  if (item.stock <= threshold) return 'warn';
-  if (item.stock >= Math.max(5, threshold + 4)) return 'plenty';
+  if (item.stock <= item.threshold) return 'warn';
+  if (item.stock >= Math.max(5, item.threshold + 4)) return 'plenty';
   return 'ok';
 }
 
-function render() { renderInventory(); renderAlerts(); renderShopping(); updateStats(); }
+function statusText(status) {
+  return status === 'critical' ? '空' : status === 'warn' ? '低' : status === 'plenty' ? '足' : '正常';
+}
 
-function updateStats() {
-  document.getElementById('total-count').textContent = inventory.length;
-  document.getElementById('warn-count').textContent = inventory.filter(i => getStatus(i) === 'warn' || getStatus(i) === 'critical').length;
+function categoryMark(cat) {
+  return '<span class="category-mark" style="color:'+escapeHTML(cat.color)+'">'+escapeHTML(cat.code)+'</span>';
+}
+
+function render() {
+  renderNav();
+  renderStats();
+  renderCategoryOptions();
+  renderFilters();
+  renderInventory();
+  renderShopping();
+  renderCategories();
+  saveAll();
+}
+
+function renderNav() {
+  const html = NAV.map(([id, label]) => '<button class="nav-item '+(currentPage===id?'active':'')+'" onclick="showPage(\''+id+'\')">'+label+'</button>').join('');
+  const side = NAV.map(([id, label]) => '<button class="side-item '+(currentPage===id?'active':'')+'" onclick="showPage(\''+id+'\')">'+label+'</button>').join('');
+  document.getElementById('bottom-nav').innerHTML = html;
+  document.getElementById('side-nav').innerHTML = side;
+}
+
+function renderStats() {
+  const low = inventory.filter(item => ['critical','warn'].includes(getStatus(item))).length;
+  document.getElementById('stat-total').textContent = inventory.length;
+  document.getElementById('stat-low').textContent = low;
+  document.getElementById('stat-barcodes').textContent = inventory.filter(item => item.barcode).length;
+  document.getElementById('stat-categories').textContent = categories.length;
+  const alert = document.getElementById('alert-section');
+  alert.classList.toggle('show', low > 0);
+  alert.textContent = low ? low + ' 个项目低于补货阈值' : '';
+}
+
+function renderCategoryOptions() {
+  const options = categories.map(cat => '<option value="'+cat.id+'">'+escapeHTML(cat.name)+'</option>').join('');
+  ['add-category','edit-category','cat-replacement'].forEach(id => {
+    const el = document.getElementById(id);
+    if (el) el.innerHTML = options;
+  });
+  const unitOptions = UNITS.map(unit => '<option value="'+unit+'">'+unit+'</option>').join('');
+  ['add-unit','edit-unit'].forEach(id => {
+    const el = document.getElementById(id);
+    if (el) el.innerHTML = unitOptions;
+  });
+}
+
+function renderFilters() {
+  const chips = ['<button class="chip '+(currentFilter==='all'?'active':'')+'" onclick="setFilter(\'all\')">全部</button>']
+    .concat(categories.map(cat => '<button class="chip '+(currentFilter===cat.id?'active':'')+'" onclick="setFilter(\''+cat.id+'\')">'+escapeHTML(cat.name)+'</button>'))
+    .join('');
+  document.getElementById('filter-row').innerHTML = chips;
 }
 
 function renderInventory() {
+  const query = document.getElementById('search-input')?.value.trim().toLowerCase() || '';
+  let items = inventory.slice();
+  if (currentFilter !== 'all') items = items.filter(item => item.categoryId === currentFilter);
+  if (query) {
+    items = items.filter(item => [item.name,item.brand,item.spec,item.barcode,item.iherbUrl,categoryById(item.categoryId).name].join(' ').toLowerCase().includes(query));
+  }
+  const order = { critical:0, warn:1, ok:2, plenty:3 };
+  items.sort((a,b) => order[getStatus(a)] - order[getStatus(b)] || a.name.localeCompare(b.name));
   const list = document.getElementById('inventory-list');
-  let items = currentFilter === '全部' ? inventory : inventory.filter(i => i.category === currentFilter);
-  if (items.length === 0) {
-    list.innerHTML = '<div class="empty-state"><div class="emoji">' + (currentFilter==='全部'?'📦':CATEGORY_ICONS[currentFilter]||'💊') + '</div><p>' + (currentFilter==='全部'?'还没有添加任何补剂<br>点击下方 ➕ 开始入库':'这个分类暂无补剂') + '</p></div>';
+  if (!items.length) {
+    list.innerHTML = '<div class="empty">暂无匹配库存</div>';
     return;
   }
-  const order = {critical:0, warn:1, ok:2, plenty:3};
-  items = [...items].sort((a,b) => order[getStatus(a)] - order[getStatus(b)]);
-
-  list.innerHTML = items.map(item => {
-    const st = getStatus(item);
-    const unit = item.unit || '瓶';
-    const icon = CATEGORY_ICONS[item.category] || '💊';
-    const badge = st==='critical' ? '<div class="supp-meta" style="margin-top:3px;color:var(--danger)">🚨 已用完</div>'
-                : st==='warn'     ? '<div class="supp-meta" style="margin-top:3px;color:var(--warn)">⚠️ 低于补货阈值 '+escapeHTML(item.threshold)+' '+escapeHTML(unit)+'</div>'
-                : st==='plenty'   ? '<div class="supp-meta" style="margin-top:3px;color:var(--muted)">库存充足</div>'
-                : '';
-    return '<div class="supp-card '+st+'" data-id="'+escapeAttr(item.id)+'" onclick="openDetailFromCard(this)">'
-      + '<div class="supp-icon">'+icon+'</div>'
-      + '<div class="supp-info">'
-      +   '<div class="supp-name">'+escapeHTML(item.name)+'</div>'
-      +   '<div class="supp-meta">'+escapeHTML(item.brand||'—')+' · '+escapeHTML(item.spec||item.category)+'</div>'
-      +   badge
-      + '</div>'
-      + '<div class="supp-right">'
-      +   '<div class="supp-stock '+st+'">'+escapeHTML(item.stock)+'</div>'
-      +   '<div class="supp-unit">'+escapeHTML(unit)+'</div>'
-      + '</div>'
-      + '</div>';
-  }).join('');
+  list.innerHTML = items.map(itemRowHTML).join('');
 }
 
-function renderAlerts() {
-  const n = inventory.filter(i => getStatus(i)==='warn'||getStatus(i)==='critical').length;
-  document.getElementById('alert-section').innerHTML = n===0 ? '' :
-    '<div class="alert-banner"><span>⚠️</span><span>有 <strong>'+n+' 种</strong>补剂需要补货</span></div>';
+function itemRowHTML(item) {
+  const cat = categoryById(item.categoryId);
+  const status = getStatus(item);
+  return '<button class="item-row '+status+'" onclick="openDetail(\''+item.id+'\')">'
+    + '<div class="item-info">'
+    +   '<div class="item-title">'+escapeHTML(item.name)+'</div>'
+    +   '<div class="item-meta">'+escapeHTML(item.brand || '-')+'</div>'
+    +   '<div class="desktop-category desktop-only">'+categoryMark(cat)+'<span>'+escapeHTML(cat.name)+'</span></div>'
+    + '</div>'
+    + '<div class="mobile-only">'+categoryMark(cat)+'</div>'
+    + '<div class="stock-cell"><span class="stock-num">'+item.stock+'</span><span class="stock-unit">'+escapeHTML(item.unit)+'</span><div class="status-bar"></div></div>'
+    + '<div class="desktop-status desktop-only">'+statusText(status)+'</div>'
+    + '<div class="desktop-only">'+escapeHTML(item.barcode || '-隐-').replace('-隐-','-')+'</div>'
+    + '</button>';
 }
 
 function renderShopping() {
-  const list = document.getElementById('shopping-list');
-  const items = inventory.filter(i => getStatus(i)==='warn'||getStatus(i)==='critical').sort((a,b)=>a.stock-b.stock);
-  if (items.length===0) {
-    list.innerHTML = '<div class="empty-state"><div class="emoji">✅</div><p>所有补剂库存充足<br>暂不需要补货</p></div>';
-    return;
-  }
-  list.innerHTML = items.map(item => {
-    const st = getStatus(item);
-    const unit = item.unit||'瓶';
-    const icon = CATEGORY_ICONS[item.category]||'💊';
-    return '<div class="supp-card '+st+'" data-id="'+escapeAttr(item.id)+'" onclick="openDetailFromCard(this)">'
-      + '<div class="supp-icon">'+icon+'</div>'
-      + '<div class="supp-info">'
-      +   '<div class="supp-name">'+escapeHTML(item.name)+'</div>'
-      +   '<div class="supp-meta">'+escapeHTML(item.brand||'—')+(item.spec?' · '+escapeHTML(item.spec):'')+'</div>'
-      +   '<div class="supp-meta" style="margin-top:3px;color:'+(st==='critical'?'var(--danger)':'var(--warn)')+'">'+
-            (st==='critical'?'🚨 已用完，需要购买':'⚠️ 剩余 '+escapeHTML(item.stock)+' '+escapeHTML(unit)+'，低于阈值 '+escapeHTML(item.threshold))+'</div>'
-      + '</div>'
-      + '<div class="supp-right"><div class="supp-stock '+st+'">'+escapeHTML(item.stock)+'</div><div class="supp-unit">'+escapeHTML(unit)+'</div></div>'
-      + '</div>';
+  const items = inventory.filter(item => ['critical','warn'].includes(getStatus(item))).sort((a,b)=>a.stock-b.stock);
+  document.getElementById('shopping-list').innerHTML = items.length ? items.map(itemRowHTML).join('') : '<div class="empty">暂无补货项目</div>';
+}
+
+function renderCategories() {
+  document.getElementById('category-list').innerHTML = categories.map(cat => {
+    const count = inventory.filter(item => item.categoryId === cat.id).length;
+    return '<button class="category-row" onclick="editCategory(\''+cat.id+'\')">'
+      + categoryMark(cat)
+      + '<div><div class="category-name">'+escapeHTML(cat.name)+'</div><div class="category-sub">'+count+' 项 · 默认阈值 '+cat.threshold+'</div></div>'
+      + '<span class="btn">编辑</span>'
+      + '</button>';
   }).join('');
 }
 
-function showPage(name, el) {
-  document.querySelectorAll('.page').forEach(p=>p.classList.remove('active'));
-  document.querySelectorAll('.nav-item').forEach(n=>n.classList.remove('active'));
-  document.getElementById('page-'+name).classList.add('active');
-  el.classList.add('active');
-  if (name!=='scan') stopScan();
+function showPage(id) {
+  currentPage = id;
+  document.querySelectorAll('.page').forEach(page => page.classList.remove('active'));
+  document.getElementById('page-' + id).classList.add('active');
+  const subtitles = { home:'库存工作台', add:'入库', shopping:'补货清单', categories:'分类管理', backup:'备份' };
+  document.getElementById('mobile-subtitle').textContent = subtitles[id] || '';
+  if (id !== 'add') stopScan();
+  renderNav();
 }
 
-function filterBy(cat, el) {
-  currentFilter = cat;
-  document.querySelectorAll('.filter-chip').forEach(c=>c.classList.remove('active'));
-  el.classList.add('active');
+function setFilter(id) {
+  currentFilter = id;
+  renderFilters();
   renderInventory();
 }
 
-function openDetailFromCard(el) {
-  openDetail(el.dataset.id);
+function addSupplement() {
+  const name = value('add-name');
+  const stock = parseInt(value('add-stock'));
+  const threshold = parseInt(value('add-threshold'));
+  const barcode = value('add-barcode');
+  if (!name) return showToast('请填写名称','error');
+  if (isNaN(stock) || stock < 0) return showToast('库存无效','error');
+  if (isNaN(threshold) || threshold < 0) return showToast('阈值无效','error');
+  if (barcode && inventory.some(item => item.barcode === barcode)) return showToast('条码已存在','error');
+  inventory.push(normalizeItem({
+    name,
+    brand: value('add-brand'),
+    categoryId: value('add-category'),
+    stock,
+    threshold,
+    unit: value('add-unit'),
+    spec: value('add-spec'),
+    barcode,
+    iherbUrl: value('add-iherb-url')
+  }));
+  ['add-name','add-brand','add-spec','add-barcode','add-iherb-url','iherb-paste'].forEach(id => setValue(id,''));
+  setValue('add-stock','1');
+  setValue('add-threshold','1');
+  hideLookupCard();
+  showToast('已添加','success');
+  showPage('home');
+  render();
 }
 
-function addSupplement() {
-  const name = document.getElementById('add-name').value.trim();
-  const stock = parseInt(document.getElementById('add-stock').value);
-  const threshold = parseInt(document.getElementById('add-threshold').value);
-  if (!name) { showToast('请填写补剂名称','error'); return; }
-  if (isNaN(stock)||stock<0) { showToast('请填写有效库存数量','error'); return; }
-  if (isNaN(threshold)||threshold<0) { showToast('请填写有效补货阈值','error'); return; }
-  const barcode = document.getElementById('add-barcode').value.trim();
-  const duplicate = barcode ? inventory.find(i => i.barcode === barcode) : null;
-  if (duplicate) {
-    showToast('这个条码已存在，已打开原库存项','info');
-    openDetail(duplicate.id);
-    return;
-  }
-  const item = {
-    id: makeId(), name,
-    brand: document.getElementById('add-brand').value.trim(),
-    category: document.getElementById('add-category').value,
-    stock, threshold, unit: document.getElementById('add-unit').value,
-    spec: document.getElementById('add-spec').value.trim(),
-    barcode,
-    iherbUrl: document.getElementById('add-iherb-url').value.trim(),
-    addedAt: new Date().toLocaleDateString('zh-CN')
-  };
-  inventory.push(item); save(); render();
-  ['add-name','add-brand','add-spec','add-barcode','add-iherb-url','iherb-paste'].forEach(id=>document.getElementById(id).value='');
-  document.getElementById('add-stock').value='1';
-  document.getElementById('add-threshold').value='1';
-  hideLookupCard();
-  showToast('✅ '+name+' 已入库','success');
-  showPage('home', document.querySelector('.nav-item'));
-}
+function value(id) { return document.getElementById(id).value.trim(); }
+function setValue(id, val) { document.getElementById(id).value = val; }
 
 function openDetail(id) {
   activeItemId = id;
-  const item = inventory.find(i=>i.id===id);
+  const item = inventory.find(it => it.id === id);
   if (!item) return;
-  const st = getStatus(item);
-  const unit = item.unit||'瓶';
+  const cat = categoryById(item.categoryId);
   document.getElementById('modal-name').textContent = item.name;
-  document.getElementById('modal-sub').textContent = (item.brand||'未知品牌')+' · '+item.category+(item.spec?' · '+item.spec:'')+(item.barcode?' · 条码 '+item.barcode:'')+(item.iherbUrl?' · iHerb 已绑定':'')+'\n入库时间：'+item.addedAt+' · 补货阈值：'+item.threshold+(item.unit||'瓶');
-  const numEl = document.getElementById('modal-stock-num');
-  numEl.textContent = item.stock; numEl.className = 'stock-big '+st;
-  document.getElementById('modal-stock-unit').textContent = unit;
-  document.getElementById('modal-adjust').value = '';
-  // prefill edit tab
-  document.getElementById('edit-name').value = item.name;
-  document.getElementById('edit-brand').value = item.brand||'';
-  document.getElementById('edit-category').value = item.category||'其他';
-  document.getElementById('edit-unit').value = UNITS.includes(unit)?unit:'瓶';
-  document.getElementById('edit-threshold').value = item.threshold ?? 1;
-  document.getElementById('edit-spec').value = item.spec||'';
-  switchTab('stock');
-  document.getElementById('detail-modal').classList.add('show');
+  document.getElementById('modal-sub').textContent = [item.brand || '未知品牌', cat.name, item.spec, item.barcode ? '条码 '+item.barcode : '', item.iherbUrl ? 'iHerb 已绑定' : ''].filter(Boolean).join(' · ');
+  updateModalStock(item);
+  setValue('edit-name', item.name);
+  setValue('edit-brand', item.brand);
+  setValue('edit-category', item.categoryId);
+  setValue('edit-unit', item.unit);
+  setValue('edit-spec', item.spec);
+  setValue('edit-barcode', item.barcode);
+  setValue('edit-stock', item.stock);
+  setValue('edit-threshold', item.threshold);
+  setValue('edit-iherb-url', item.iherbUrl);
+  document.getElementById('item-modal').classList.add('show');
 }
 
-function switchTab(tab) {
-  document.querySelectorAll('.modal-tab').forEach((t,i)=>t.classList.toggle('active',['stock','edit'][i]===tab));
-  document.getElementById('tab-stock').classList.toggle('active',tab==='stock');
-  document.getElementById('tab-edit').classList.toggle('active',tab==='edit');
+function updateModalStock(item) {
+  const el = document.getElementById('modal-stock');
+  el.textContent = item.stock;
+  el.className = 'stock-big ' + getStatus(item);
 }
 
-function closeModal() { document.getElementById('detail-modal').classList.remove('show'); activeItemId=null; }
+function closeModal() {
+  activeItemId = null;
+  document.getElementById('item-modal').classList.remove('show');
+}
 
 function quickAdj(dir) {
-  const item = inventory.find(i=>i.id===activeItemId);
+  const item = inventory.find(it => it.id === activeItemId);
   if (!item) return;
-  item.stock = Math.max(0, item.stock+dir);
-  save(); render();
-  const st = getStatus(item);
-  const numEl = document.getElementById('modal-stock-num');
-  numEl.textContent = item.stock; numEl.className = 'stock-big '+st;
+  item.stock = Math.max(0, item.stock + dir);
+  setValue('edit-stock', item.stock);
+  updateModalStock(item);
+  render();
 }
 
-function adjustStock(dir) {
-  const amount = parseInt(document.getElementById('modal-adjust').value);
-  if (isNaN(amount)||amount<=0) { showToast('请输入有效数量','error'); return; }
-  const item = inventory.find(i=>i.id===activeItemId);
+function saveItemEdit() {
+  const item = inventory.find(it => it.id === activeItemId);
   if (!item) return;
-  item.stock = Math.max(0, item.stock+dir*amount);
-  save(); render(); closeModal();
-  showToast((dir>0?'✅ 入库 ':'📤 出库 ')+amount+'，'+item.name+' 剩余 '+item.stock+(item.unit||'瓶'),'success');
-}
-
-function saveEdit() {
-  const item = inventory.find(i=>i.id===activeItemId);
-  if (!item) return;
-  const name = document.getElementById('edit-name').value.trim();
-  const threshold = parseInt(document.getElementById('edit-threshold').value);
-  if (!name) { showToast('名称不能为空','error'); return; }
-  if (isNaN(threshold)||threshold<0) { showToast('请填写有效补货阈值','error'); return; }
-  item.name=name;
-  item.brand=document.getElementById('edit-brand').value.trim();
-  item.category=document.getElementById('edit-category').value;
-  item.unit=document.getElementById('edit-unit').value;
-  item.threshold=threshold;
-  item.spec=document.getElementById('edit-spec').value.trim();
-  save(); render();
-  document.getElementById('modal-name').textContent=item.name;
-  document.getElementById('modal-sub').textContent=(item.brand||'未知品牌')+' · '+item.category+(item.spec?' · '+item.spec:'')+(item.barcode?' · 条码 '+item.barcode:'')+(item.iherbUrl?' · iHerb 已绑定':'')+'\n入库时间：'+item.addedAt+' · 补货阈值：'+item.threshold+(item.unit||'瓶');
-  document.getElementById('modal-stock-unit').textContent=item.unit||'瓶';
-  switchTab('stock');
-  showToast('✅ 信息已更新','success');
+  const name = value('edit-name');
+  if (!name) return showToast('名称不能为空','error');
+  const barcode = value('edit-barcode');
+  if (barcode && inventory.some(it => it.id !== item.id && it.barcode === barcode)) return showToast('条码已存在','error');
+  Object.assign(item, normalizeItem({
+    ...item,
+    name,
+    brand: value('edit-brand'),
+    categoryId: value('edit-category'),
+    unit: value('edit-unit'),
+    spec: value('edit-spec'),
+    barcode,
+    stock: parseInt(value('edit-stock')),
+    threshold: parseInt(value('edit-threshold')),
+    iherbUrl: value('edit-iherb-url')
+  }));
+  render();
+  openDetail(item.id);
+  showToast('已保存','success');
 }
 
 function deleteItem() {
-  const item = inventory.find(i=>i.id===activeItemId);
-  if (!item||!confirm('确定删除「'+item.name+'」吗？')) return;
-  inventory=inventory.filter(i=>i.id!==activeItemId);
-  save(); render(); closeModal();
-  showToast('已删除 '+item.name,'error');
+  const item = inventory.find(it => it.id === activeItemId);
+  if (!item || !confirm('删除 '+item.name+'？')) return;
+  inventory = inventory.filter(it => it.id !== activeItemId);
+  closeModal();
+  render();
+  showToast('已删除','info');
 }
 
-// 扫码与条码查询
-let scanning = false;
-async function startScan() {
-  if (!('BarcodeDetector' in window)) {
-    await startZxingScan();
-    return;
-  }
+function newCategory() {
+  activeCategoryId = null;
+  setValue('cat-name','');
+  setValue('cat-code','');
+  setValue('cat-color','#c8f060');
+  setValue('cat-threshold','1');
+}
 
+function editCategory(id) {
+  const cat = categoryById(id);
+  activeCategoryId = cat.id;
+  setValue('cat-name', cat.name);
+  setValue('cat-code', cat.code);
+  setValue('cat-color', cat.color);
+  setValue('cat-threshold', cat.threshold);
+}
+
+function saveCategory() {
+  const name = value('cat-name');
+  const code = value('cat-code').toUpperCase();
+  const color = value('cat-color');
+  const threshold = parseInt(value('cat-threshold'));
+  if (!name || !code) return showToast('分类名称和短标必填','error');
+  if (isNaN(threshold) || threshold < 0) return showToast('阈值无效','error');
+  if (activeCategoryId) {
+    const cat = categoryById(activeCategoryId);
+    Object.assign(cat, normalizeCategory({ ...cat, name, code, color, threshold }));
+  } else {
+    categories.push(normalizeCategory({ id: makeId('cat'), name, code, color, threshold }));
+  }
+  newCategory();
+  render();
+  showToast('分类已保存','success');
+}
+
+function deleteCategory() {
+  if (!activeCategoryId) return showToast('请选择分类','error');
+  const cat = categoryById(activeCategoryId);
+  if (cat.locked || categories.length <= 1) return showToast('此分类不能删除','error');
+  const replacement = value('cat-replacement');
+  if (replacement === cat.id) return showToast('请选择其他迁移分类','error');
+  if (!confirm('删除分类 '+cat.name+'？')) return;
+  inventory.forEach(item => { if (item.categoryId === cat.id) item.categoryId = replacement; });
+  categories = categories.filter(item => item.id !== cat.id);
+  if (currentFilter === cat.id) currentFilter = 'all';
+  newCategory();
+  render();
+  showToast('分类已删除','info');
+}
+
+async function startScan() {
+  if (!('BarcodeDetector' in window)) return startZxingScan();
   try {
     barcodeDetector = new BarcodeDetector({ formats: BARCODE_FORMATS });
-    scanStream = await navigator.mediaDevices.getUserMedia({
-      video: { facingMode: { ideal: 'environment' }, width: { ideal: 1280 }, height: { ideal: 720 } },
-      audio: false
-    });
+    scanStream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: { ideal:'environment' } }, audio: false });
     const video = document.getElementById('scanner-video');
     video.srcObject = scanStream;
     await video.play();
-    document.getElementById('scanner-container').style.display='block';
-    document.getElementById('stop-btn').style.display='block';
-    document.getElementById('scan-area').style.display='none';
-    scanning = true;
-    showLookupCard('正在扫描', '请把条形码放进取景框内，保持 1-2 秒。');
+    showScanner(true);
     scanLoop();
   } catch(e) {
     stopScan();
-    showLookupCard('无法打开摄像头', '请确认浏览器允许相机权限，或者手动输入条形码查询。');
-    showToast('无法访问摄像头','error');
+    showLookupCard('无法打开摄像头', '可使用拍照识别或手动输入条码。');
   }
+}
+
+async function scanLoop() {
+  if (!barcodeDetector) return;
+  try {
+    const codes = await barcodeDetector.detect(document.getElementById('scanner-video'));
+    if (codes && codes[0]) return handleBarcode(codes[0].rawValue);
+  } catch(e) {}
+  scanTimer = setTimeout(scanLoop, 450);
 }
 
 async function startZxingScan() {
   try {
     await loadZxing();
-    const video = document.getElementById('scanner-video');
     const reader = new ZXingBrowser.BrowserMultiFormatReader();
-    document.getElementById('scanner-container').style.display='block';
-    document.getElementById('stop-btn').style.display='block';
-    document.getElementById('scan-area').style.display='none';
-    scanning = true;
-    showLookupCard('正在使用备用扫码', '请把条形码放进取景框内。首次加载备用扫码引擎需要联网。');
+    showScanner(true);
     zxingControls = await reader.decodeFromConstraints(
-      { video: { facingMode: { ideal: 'environment' }, width: { ideal: 1280 }, height: { ideal: 720 } }, audio: false },
-      video,
-      (result) => {
-        if (!result || !scanning) return;
-        handleBarcode(result.getText ? result.getText() : result.text);
-      }
+      { video: { facingMode: { ideal:'environment' } }, audio:false },
+      document.getElementById('scanner-video'),
+      result => { if (result) handleBarcode(result.getText ? result.getText() : result.text); }
     );
   } catch(e) {
     stopScan();
-    showLookupCard('此浏览器暂不支持扫码', '备用扫码引擎也没能启动。你仍然可以手动输入条形码后点“查询商品信息”。如果在手机上使用，建议通过 GitHub Pages 的 https 链接打开。');
-    showToast('扫码启动失败','error');
-    document.getElementById('add-barcode').focus();
+    showLookupCard('扫码不可用', '请使用拍照识别或手动输入条码。');
   }
+}
+
+function showScanner(on) {
+  document.getElementById('scanner-container').style.display = on ? 'block' : 'none';
+  document.getElementById('stop-btn').style.display = on ? 'inline-flex' : 'none';
+}
+
+function stopScan() {
+  if (scanTimer) clearTimeout(scanTimer);
+  scanTimer = null;
+  if (zxingControls?.stop) { try { zxingControls.stop(); } catch(e) {} }
+  zxingControls = null;
+  if (scanStream) scanStream.getTracks().forEach(track => track.stop());
+  scanStream = null;
+  barcodeDetector = null;
+  const video = document.getElementById('scanner-video');
+  if (video) video.srcObject = null;
+  showScanner(false);
 }
 
 async function scanBarcodeImage(event) {
@@ -715,34 +1017,23 @@ async function scanBarcodeImage(event) {
   if (!file) return;
   try {
     await loadZxing();
-    showLookupCard('正在识别照片', '如果一次没识别到，可以让条码占满画面再拍一张。');
     const img = new Image();
     const url = URL.createObjectURL(file);
     img.onload = async () => {
       try {
         const reader = new ZXingBrowser.BrowserMultiFormatReader();
         const result = await reader.decodeFromImageElement(img);
-        URL.revokeObjectURL(url);
-        event.target.value = '';
         await handleBarcode(result.getText ? result.getText() : result.text);
       } catch(e) {
+        showLookupCard('照片未识别', '请让条码更清晰、更大一些。');
+      } finally {
         URL.revokeObjectURL(url);
         event.target.value = '';
-        showLookupCard('照片里没有识别到条码', '请让条形码更清晰、更大一些，避免反光，然后再拍一次。也可以直接手动输入条码。');
-        showToast('没有识别到条码','error');
       }
-    };
-    img.onerror = () => {
-      URL.revokeObjectURL(url);
-      event.target.value = '';
-      showLookupCard('照片读取失败', '请重新拍照，或者手动输入条码。');
-      showToast('照片读取失败','error');
     };
     img.src = url;
   } catch(e) {
-    event.target.value = '';
-    showLookupCard('无法加载拍照识别', '请确认当前页面可以联网加载备用扫码引擎，或者先手动输入条码。');
-    showToast('拍照识别不可用','error');
+    showLookupCard('拍照识别不可用', '请手动输入条码。');
   }
 }
 
@@ -750,142 +1041,110 @@ function loadZxing() {
   if (window.ZXingBrowser) return Promise.resolve();
   if (zxingLoading) return zxingLoading;
   zxingLoading = new Promise((resolve, reject) => {
-    const s = document.createElement('script');
-    s.src = ZXING_CDN;
-    s.async = true;
-    s.onload = () => window.ZXingBrowser ? resolve() : reject(new Error('ZXing 未加载'));
-    s.onerror = () => reject(new Error('ZXing 加载失败'));
-    document.head.appendChild(s);
+    const script = document.createElement('script');
+    script.src = ZXING_CDN;
+    script.async = true;
+    script.onload = () => window.ZXingBrowser ? resolve() : reject();
+    script.onerror = reject;
+    document.head.appendChild(script);
   });
   return zxingLoading;
 }
 
-async function scanLoop() {
-  if (!scanning || !barcodeDetector) return;
-  const video = document.getElementById('scanner-video');
-  try {
-    const codes = await barcodeDetector.detect(video);
-    if (codes && codes.length > 0) {
-      await handleBarcode(codes[0].rawValue);
-      return;
-    }
-  } catch(e) {}
-  scanTimer = setTimeout(scanLoop, 450);
-}
-
-function stopScan() {
-  if(scanTimer) clearTimeout(scanTimer);
-  scanTimer = null;
-  if (zxingControls && zxingControls.stop) {
-    try { zxingControls.stop(); } catch(e) {}
-  }
-  zxingControls = null;
-  scanning=false;
-  const video = document.getElementById('scanner-video');
-  if (video) video.srcObject = null;
-  if (scanStream) scanStream.getTracks().forEach(track=>track.stop());
-  scanStream = null;
-  document.getElementById('scanner-container').style.display='none';
-  document.getElementById('stop-btn').style.display='none';
-  document.getElementById('scan-area').style.display='block';
-}
-
 async function handleBarcode(code) {
-  const cleanCode = String(code || '').trim();
-  if (!cleanCode) return;
+  const clean = String(code || '').trim();
+  if (!clean) return;
   stopScan();
-  document.getElementById('add-barcode').value = cleanCode;
-  const existing = inventory.find(i => i.barcode === cleanCode);
+  setValue('add-barcode', clean);
+  const existing = inventory.find(item => item.barcode === clean);
   if (existing) {
-    showLookupCard('已在库存中找到', '这个条码已经对应「'+existing.name+'」。我已打开它的库存详情。');
+    showToast('已找到库存项','success');
     openDetail(existing.id);
     return;
   }
-  showToast('📷 已识别条码 '+cleanCode,'info');
-  await lookupBarcode(cleanCode);
+  await lookupBarcode(clean);
 }
 
 function lookupBarcodeFromInput() {
-  const code = document.getElementById('add-barcode').value.trim();
-  if (!code) { showToast('请先输入条形码','error'); return; }
+  const code = value('add-barcode');
+  if (!code) return showToast('请先输入条码','error');
   handleBarcode(code);
 }
 
-function clearBarcode() {
-  document.getElementById('add-barcode').value = '';
-  hideLookupCard();
-}
-
-function parseIherbInfo() {
-  const url = document.getElementById('add-iherb-url').value.trim();
-  const pasted = document.getElementById('iherb-paste').value.trim();
-  const raw = (url + '\n' + pasted).trim();
-  if (!raw) {
-    showToast('请先粘贴 iHerb 链接或商品信息','error');
-    return;
-  }
-
-  const parsed = parseSupplementText(raw, url);
-  if (parsed.barcode) {
-    document.getElementById('add-barcode').value = parsed.barcode;
-    const existing = inventory.find(i => i.barcode === parsed.barcode);
-    if (existing) {
-      showLookupCard('已在库存中找到', '这个条码已经对应「'+existing.name+'」。我已打开它的库存详情。');
-      openDetail(existing.id);
+async function lookupBarcode(code) {
+  showLookupCard('正在查询', '条码 '+code);
+  const fields = 'product_name,brands,quantity,serving_size,categories,categories_tags';
+  const urls = [
+    'https://world.openfoodfacts.org/api/v2/product/'+encodeURIComponent(code)+'.json?fields='+fields,
+    'https://world.openproductsfacts.org/api/v2/product/'+encodeURIComponent(code)+'.json?fields='+fields,
+    'https://world.openbeautyfacts.org/api/v2/product/'+encodeURIComponent(code)+'.json?fields='+fields
+  ];
+  let networkError = false;
+  for (const url of urls) {
+    const data = await fetchProductInfo(url).catch(() => { networkError = true; return null; });
+    if (data?.product) {
+      applyProductInfo(data.product, code);
       return;
     }
   }
-  if (parsed.iherbUrl) document.getElementById('add-iherb-url').value = parsed.iherbUrl;
-  if (parsed.name) document.getElementById('add-name').value = parsed.name;
-  if (parsed.brand) document.getElementById('add-brand').value = parsed.brand;
-  if (parsed.spec) document.getElementById('add-spec').value = mergeSpecWithBarcode(parsed.spec, parsed.barcode || document.getElementById('add-barcode').value.trim()).replace(/\s*·\s*条形码:\s*$/, '');
-  document.getElementById('add-category').value = inferCategory({ product_name: (parsed.name || '') + ' ' + (parsed.spec || '') });
+  setValue('add-spec', mergeSpecWithBarcode(value('add-spec'), code));
+  showLookupCard(networkError ? '数据库不可达' : '公开库未收录', '可手动填写并保存为本地条码记录。');
+}
 
-  const filled = [
-    parsed.brand ? '品牌' : '',
-    parsed.name ? '名称' : '',
-    parsed.spec ? '规格' : '',
-    parsed.barcode ? '条码' : '',
-    parsed.iherbUrl ? '链接' : ''
-  ].filter(Boolean).join('、');
-  showLookupCard('iHerb 信息已解析', filled ? '已填入：'+filled+'。请快速确认一下再保存。' : '没有识别出足够信息，请多复制一点商品页内容再试。');
-  showToast(filled ? '已解析 iHerb 信息' : '可识别信息较少', filled ? 'success' : 'info');
+async function fetchProductInfo(url) {
+  const controller = new AbortController();
+  const timer = setTimeout(() => controller.abort(), 10000);
+  try {
+    const res = await fetch(url, { signal: controller.signal, mode:'cors', cache:'no-store' });
+    if (!res.ok) return null;
+    return await res.json();
+  } finally {
+    clearTimeout(timer);
+  }
+}
+
+function applyProductInfo(product, code) {
+  if (product.product_name) setValue('add-name', product.product_name);
+  if (product.brands) setValue('add-brand', product.brands.split(',')[0].trim());
+  const spec = product.quantity || product.serving_size || '';
+  setValue('add-spec', mergeSpecWithBarcode(spec || value('add-spec'), code));
+  setValue('add-category', inferCategory((product.product_name || '') + ' ' + (product.categories || '')));
+  showLookupCard('已填入商品信息', [product.brands, product.product_name, spec].filter(Boolean).join(' · '));
+}
+
+function parseIherbInfo() {
+  const url = value('add-iherb-url');
+  const raw = (url + '\n' + value('iherb-paste')).trim();
+  if (!raw) return showToast('请粘贴 iHerb 信息','error');
+  const parsed = parseSupplementText(raw, url);
+  if (parsed.barcode) setValue('add-barcode', parsed.barcode);
+  if (parsed.iherbUrl) setValue('add-iherb-url', parsed.iherbUrl);
+  if (parsed.name) setValue('add-name', parsed.name);
+  if (parsed.brand) setValue('add-brand', parsed.brand);
+  if (parsed.spec) setValue('add-spec', mergeSpecWithBarcode(parsed.spec, parsed.barcode || value('add-barcode')).replace(/\s*·\s*条码:\s*$/, ''));
+  setValue('add-category', inferCategory((parsed.name || '') + ' ' + (parsed.spec || '')));
+  showToast('已解析','success');
 }
 
 function clearIherbImport() {
-  document.getElementById('add-iherb-url').value = '';
-  document.getElementById('iherb-paste').value = '';
+  setValue('add-iherb-url','');
+  setValue('iherb-paste','');
 }
 
 function parseSupplementText(raw, explicitUrl) {
   const text = String(raw || '').replace(/\r/g, '\n');
   const lines = text.split('\n').map(line => line.trim()).filter(Boolean);
   const url = explicitUrl || ((text.match(/https?:\/\/(?:www\.)?iherb\.com\/\S+/i) || [])[0] || '');
-  const barcode = findBarcode(text);
-  const fromText = parseTitleFromLines(lines);
+  const first = lines.find(line => line.length > 5 && !/^https?:\/\//i.test(line)) || '';
+  const parts = first.split(',').map(part => part.trim()).filter(Boolean);
   const fromUrl = parseIherbUrl(url);
-  const itemNo = findIherbItemNumber(text, url);
-  const spec = findSpec(text) || fromText.spec || fromUrl.spec || (itemNo ? 'iHerb 商品编号: '+itemNo : '');
-
   return {
     iherbUrl: url,
-    barcode,
-    brand: fromText.brand || fromUrl.brand,
-    name: fromText.name || fromUrl.name,
-    spec
+    barcode: findBarcode(text),
+    brand: parts.length > 1 ? parts[0] : fromUrl.brand,
+    name: parts.length > 1 ? parts.slice(1).join(', ') : (first || fromUrl.name),
+    spec: findSpec(text) || fromUrl.spec
   };
-}
-
-function parseTitleFromLines(lines) {
-  const ignored = /^(supplement facts|nutrition facts|details|description|reviews?|shipping|add to cart|in stock|out of stock|price|qty|quantity|商品详情|评论|加入购物车|有货|缺货)$/i;
-  const candidate = lines.find(line => line.length >= 6 && !ignored.test(line) && !/^https?:\/\//i.test(line));
-  if (!candidate) return {};
-  const cleaned = candidate.replace(/\s+/g, ' ').replace(/\s+-\s+iHerb.*$/i, '').trim();
-  const parts = cleaned.split(',').map(p => p.trim()).filter(Boolean);
-  if (parts.length >= 2 && parts[0].length <= 36) {
-    return { brand: parts[0], name: parts.slice(1).join(', '), spec: findSpec(cleaned) };
-  }
-  return { name: cleaned, spec: findSpec(cleaned) };
 }
 
 function parseIherbUrl(url) {
@@ -893,63 +1152,26 @@ function parseIherbUrl(url) {
   try {
     const u = new URL(url);
     const parts = u.pathname.split('/').filter(Boolean);
-    const prIndex = parts.findIndex(p => p.toLowerCase() === 'pr');
-    const slug = prIndex >= 0 ? parts[prIndex + 1] : parts.find(p => /-/.test(p));
+    const slug = parts[parts.findIndex(p => p.toLowerCase() === 'pr') + 1] || parts.find(p => p.includes('-')) || '';
     const itemNo = parts.find(p => /^\d{4,}$/.test(p));
-    if (!slug) return itemNo ? { spec: 'iHerb 商品编号: '+itemNo } : {};
-    return titleFromSlug(slug, itemNo);
+    const title = slug.split('-').map(word => /^(mg|mcg|iu|d3|k2|b12|q10|nmn|tmg)$/i.test(word) ? word.toUpperCase() : word.charAt(0).toUpperCase()+word.slice(1)).join(' ');
+    return { name: title, spec: [findSpec(title), itemNo ? 'iHerb 商品编号: '+itemNo : ''].filter(Boolean).join(' · ') };
   } catch(e) {
     return {};
   }
 }
 
-function titleFromSlug(slug, itemNo) {
-  const knownBrands = [
-    'California Gold Nutrition','Life Extension','NOW Foods','Doctor\'s Best','Jarrow Formulas','Thorne','Nordic Naturals',
-    'Solgar','Source Naturals','Natural Factors','Nature\'s Way','Sports Research','Optimum Nutrition','Garden of Life',
-    'Pure Encapsulations','Swanson','Carlson','Enzymedica','MegaFood','Nutricost','Lake Avenue Nutrition','21st Century',
-    'Healthy Origins','Country Life','Bluebonnet Nutrition','Nature Made','Kirkman Labs','MRM Nutrition','ALLMAX Nutrition'
-  ];
-  const title = slug.split('-').map(word => {
-    if (/^\d+$/.test(word)) return word;
-    if (/^(mg|mcg|iu|d3|k2|b12|b6|nmn|tmg|dha|epa|q10)$/i.test(word)) return word.toUpperCase();
-    return word.charAt(0).toUpperCase() + word.slice(1);
-  }).join(' ');
-  const normalizedTitle = normalizeForMatch(title);
-  let brand = '';
-  for (const candidate of knownBrands) {
-    if (normalizedTitle.startsWith(normalizeForMatch(candidate))) {
-      brand = candidate;
-      break;
-    }
-  }
-  const name = brand ? title.slice(brand.length).replace(/^[-,\s]+/, '').trim() : title;
-  const spec = [findSpec(title), itemNo ? 'iHerb 商品编号: '+itemNo : ''].filter(Boolean).join(' · ');
-  return { brand, name, spec };
-}
-
-function normalizeForMatch(value) {
-  return String(value || '').toLowerCase().replace(/[^a-z0-9]+/g, '');
-}
-
 function findBarcode(text) {
-  const labeled = text.match(/(?:UPC|Barcode|Bar\s*Code|条形码|條形碼|EAN|GTIN)\D{0,20}(\d{8,14})/i);
+  const labeled = String(text).match(/(?:UPC|Barcode|Bar\s*Code|条形码|EAN|GTIN)\D{0,20}(\d{8,14})/i);
   if (labeled) return labeled[1];
-  const standalone = text.match(/\b(\d{12,14})\b/);
+  const standalone = String(text).match(/\b(\d{12,14})\b/);
   return standalone ? standalone[1] : '';
-}
-
-function findIherbItemNumber(text, url) {
-  const labeled = text.match(/(?:Item\s*#|Product\s*Code|SKU|商品编号|商品編號|货号|貨號)\D{0,20}([A-Z0-9-]{4,})/i);
-  if (labeled) return labeled[1];
-  const pathNo = String(url || '').match(/\/(\d{4,})(?:[/?#]|$)/);
-  return pathNo ? pathNo[1] : '';
 }
 
 function findSpec(text) {
   const patterns = [
-    /\b\d+(?:\.\d+)?\s*(?:mg|mcg|g|iu|ml)\b.{0,36}?\b\d+\s*(?:capsules?|veggie capsules?|softgels?|tablets?|servings?|gummies?|lozenges?|粒|片|胶囊|膠囊|软胶囊|軟膠囊|份|包|袋|瓶)\b/i,
-    /\b\d+\s*(?:capsules?|veggie capsules?|softgels?|tablets?|servings?|gummies?|lozenges?|粒|片|胶囊|膠囊|软胶囊|軟膠囊|份|包|袋|瓶)\b/i,
+    /\b\d+(?:\.\d+)?\s*(?:mg|mcg|g|iu|ml)\b.{0,36}?\b\d+\s*(?:(?:fish|gelatin|veggie|vegetarian|vegan)\s+){0,3}(?:capsules?|softgels?|tablets?|servings?|gummies?|lozenges?|粒|片|胶囊|软胶囊|份|包|袋|瓶)\b/i,
+    /\b\d+\s*(?:(?:fish|gelatin|veggie|vegetarian|vegan)\s+){0,3}(?:capsules?|softgels?|tablets?|servings?|gummies?|lozenges?|粒|片|胶囊|软胶囊|份|包|袋|瓶)\b/i,
     /\b\d+(?:\.\d+)?\s*(?:mg|mcg|g|iu|ml)\b/i
   ];
   for (const pattern of patterns) {
@@ -959,105 +1181,46 @@ function findSpec(text) {
   return '';
 }
 
-async function lookupBarcode(code) {
-  showLookupCard('正在查询商品信息', '条码：'+code+'。如果公开数据库没有收录，仍然可以手动填写。');
-  const fields = 'product_name,brands,quantity,serving_size,categories,categories_tags';
-  const lookupUrls = [
-    'https://world.openfoodfacts.org/api/v2/product/'+encodeURIComponent(code)+'.json?fields='+fields,
-    'https://world.openproductsfacts.org/api/v2/product/'+encodeURIComponent(code)+'.json?fields='+fields,
-    'https://world.openbeautyfacts.org/api/v2/product/'+encodeURIComponent(code)+'.json?fields='+fields
+function inferCategory(text) {
+  const t = String(text || '').toLowerCase();
+  const matchers = [
+    [/magnesium|zinc|iron|calcium|minerals?|镁|锌|铁|钙/, 'mineral'],
+    [/probiotic|prebiotic|fiber|gut|益生菌|益生元|肠道/, 'gut'],
+    [/omega|fish oil|coq10|q10|nmn|nad|mitochondria|鱼油|辅酶/, 'mito'],
+    [/glutathione|vitamin c|antioxidant|resveratrol|抗氧化/, 'antiox'],
+    [/methyl|b12|folate|tmg|sam-e|甲基|叶酸/, 'methyl']
   ];
-  let hadNetworkError = false;
-
-  for (const url of lookupUrls) {
-    const data = await fetchProductInfo(url).catch(() => {
-      hadNetworkError = true;
-      return null;
-    });
-    if (data && data.product) {
-      applyProductInfo(data.product, code);
-      return;
-    }
-  }
-
-  document.getElementById('add-spec').value = mergeSpecWithBarcode(document.getElementById('add-spec').value, code);
-  document.getElementById('add-name').focus();
-  if (hadNetworkError) {
-    showLookupCard('没能连接商品数据库', '已保留条码 '+code+'。这通常是网络、Safari 隐私限制或数据库临时不可达导致。你仍然可以手动填写并保存，下次扫这个条码会直接打开本地库存项。');
-  } else {
-    showLookupCard('公开数据库没有收录', '已保留条码 '+code+'。请手动填写名称、品牌和规格；保存后，这个条码就会成为你自己的本地识别记录。');
-  }
-}
-
-async function fetchProductInfo(url) {
-  const controller = new AbortController();
-  const timer = setTimeout(()=>controller.abort(), 10000);
-  try {
-    const res = await fetch(url, { signal: controller.signal, mode: 'cors', cache: 'no-store' });
-    if (!res.ok) return null;
-    return await res.json();
-  } finally {
-    clearTimeout(timer);
-  }
-}
-
-function applyProductInfo(product, code) {
-  const name = product.product_name || '';
-  const brand = product.brands || '';
-  const spec = product.quantity || product.serving_size || '';
-  if (name) document.getElementById('add-name').value = name;
-  if (brand) document.getElementById('add-brand').value = brand.split(',')[0].trim();
-  if (spec) document.getElementById('add-spec').value = mergeSpecWithBarcode(spec, code);
-  else document.getElementById('add-spec').value = mergeSpecWithBarcode(document.getElementById('add-spec').value, code);
-  document.getElementById('add-category').value = inferCategory(product);
-  showLookupCard('已自动填入商品信息', (name || '未命名商品') + (brand ? ' · ' + brand : '') + (spec ? ' · ' + spec : ''));
-  showToast('已找到商品信息','success');
-  document.getElementById('add-stock').focus();
-}
-
-function inferCategory(product) {
-  const text = ((product.categories || '') + ' ' + ((product.categories_tags || []).join(' ')) + ' ' + (product.product_name || '')).toLowerCase();
-  if (/magnesium|zinc|iron|calcium|minerals?|镁|锌|铁|钙/.test(text)) return '矿物质';
-  if (/probiotic|prebiotic|fiber|gut|益生菌|益生元|肠道/.test(text)) return '肠道';
-  if (/omega|fish oil|coq10|q10|nmn|nad|mitochondria|鱼油|辅酶/.test(text)) return '线粒体';
-  if (/glutathione|vitamin c|antioxidant|resveratrol|抗氧化/.test(text)) return '抗氧化';
-  if (/methyl|b12|folate|tmg|sam-e|甲基|叶酸/.test(text)) return '甲基化';
-  return '其他';
+  const found = matchers.find(([regex]) => regex.test(t));
+  return found && categoryById(found[1]) ? found[1] : categoryById('other').id;
 }
 
 function mergeSpecWithBarcode(spec, code) {
-  const cleanSpec = String(spec || '').replace(/\s*条形码:\s*\S+\s*/g, '').trim();
-  return (cleanSpec ? cleanSpec + ' · ' : '') + '条形码: ' + code;
+  const base = String(spec || '').replace(/\s*·?\s*条码:\s*\S+\s*/g, '').trim();
+  return code ? [base, '条码: '+code].filter(Boolean).join(' · ') : base;
 }
 
 function showLookupCard(title, text) {
+  document.getElementById('lookup-card').style.display = 'block';
   document.getElementById('lookup-title').textContent = title;
   document.getElementById('lookup-text').textContent = text;
-  document.getElementById('lookup-card').classList.add('show');
 }
 
 function hideLookupCard() {
-  document.getElementById('lookup-card').classList.remove('show');
+  document.getElementById('lookup-card').style.display = 'none';
 }
 
 function exportData() {
-  const payload = {
-    app: 'supp_inventory',
-    version: 2,
-    exportedAt: new Date().toISOString(),
-    inventory
-  };
-  const blob = new Blob([JSON.stringify(payload, null, 2)], { type: 'application/json' });
+  const payload = { app:'supp_inventory', version:3, exportedAt:new Date().toISOString(), categories, inventory };
+  const blob = new Blob([JSON.stringify(payload, null, 2)], { type:'application/json' });
   const url = URL.createObjectURL(blob);
   const a = document.createElement('a');
-  const date = new Date().toISOString().slice(0,10);
   a.href = url;
-  a.download = 'supp-inventory-backup-' + date + '.json';
+  a.download = 'supp-inventory-backup-' + new Date().toISOString().slice(0,10) + '.json';
   document.body.appendChild(a);
   a.click();
   a.remove();
   URL.revokeObjectURL(url);
-  showToast('备份已导出','success');
+  showToast('已导出','success');
 }
 
 function importData(event) {
@@ -1067,16 +1230,14 @@ function importData(event) {
   reader.onload = () => {
     try {
       const parsed = JSON.parse(reader.result);
+      if (Array.isArray(parsed.categories)) categories = parsed.categories.map(normalizeCategory);
       const list = Array.isArray(parsed) ? parsed : parsed.inventory;
-      if (!Array.isArray(list)) throw new Error('invalid backup');
-      const normalized = list.map(normalizeItem).filter(i => i.name);
-      if (!normalized.length) throw new Error('empty backup');
-      if (!confirm('将导入 '+normalized.length+' 条库存记录，并覆盖当前数据。确定继续吗？')) return;
-      inventory = normalized;
-      save(); render();
-      showToast('导入完成','success');
+      if (!Array.isArray(list)) throw new Error('invalid');
+      inventory = list.map(normalizeItem).filter(item => item.name);
+      render();
+      showToast('已导入','success');
     } catch(e) {
-      showToast('备份文件无法识别','error');
+      showToast('导入失败','error');
     } finally {
       event.target.value = '';
     }
@@ -1084,30 +1245,26 @@ function importData(event) {
   reader.readAsText(file);
 }
 
-function showToast(msg, type='success') {
-  const t=document.getElementById('toast');
-  t.textContent=msg; t.className='toast '+type+' show';
-  setTimeout(()=>t.classList.remove('show'),2800);
+function showToast(message, type='success') {
+  const toast = document.getElementById('toast');
+  toast.textContent = message;
+  toast.className = 'toast ' + type + ' show';
+  setTimeout(() => toast.classList.remove('show'), 2400);
 }
 
-// 示例数据（首次使用）
 function seedDemo() {
-  if(inventory.length>0) return;
-  inventory=[
-    {id:'1',name:'NMN',brand:'Alive By Science',category:'线粒体',stock:3,threshold:1,unit:'瓶',spec:'250mg×60粒/瓶',barcode:'',addedAt:'2026/5/1'},
-    {id:'2',name:'TMG',brand:'Jarrow Formulas',category:'甲基化',stock:1,threshold:1,unit:'瓶',spec:'500mg×60粒/瓶',barcode:'',addedAt:'2026/5/1'},
-    {id:'3',name:'镁甘氨酸',brand:'Thorne',category:'矿物质',stock:0,threshold:1,unit:'瓶',spec:'200mg×90粒/瓶',barcode:'',addedAt:'2026/4/20'},
-    {id:'4',name:'鱼油 Omega-3',brand:'Nordic Naturals',category:'抗氧化',stock:6,threshold:1,unit:'瓶',spec:'1000mg×120粒/瓶',barcode:'',addedAt:'2026/5/1'},
-    {id:'5',name:'维生素D3+K2',brand:'Life Extension',category:'其他',stock:2,threshold:1,unit:'瓶',spec:'5000IU×60粒/瓶',barcode:'',addedAt:'2026/4/15'},
-    {id:'6',name:'辅酶Q10',brand:"Doctor's Best",category:'线粒体',stock:5,threshold:1,unit:'瓶',spec:'200mg×90粒/瓶',barcode:'',addedAt:'2026/5/1'},
+  if (inventory.length) return;
+  inventory = [
+    { name:'NMN', brand:'Alive By Science', categoryId:'mito', stock:3, threshold:1, unit:'瓶', spec:'250mg x 60' },
+    { name:'TMG', brand:'Jarrow Formulas', categoryId:'methyl', stock:1, threshold:1, unit:'瓶', spec:'500mg x 60' },
+    { name:'镁甘氨酸', brand:'Thorne', categoryId:'mineral', stock:0, threshold:1, unit:'瓶', spec:'200mg x 90' },
+    { name:'鱼油 Omega-3', brand:'Nordic Naturals', categoryId:'antiox', stock:6, threshold:1, unit:'瓶', spec:'1000mg x 120' }
   ].map(normalizeItem);
-  save();
 }
 
-inventory = inventory.map(normalizeItem).filter(i => i.name);
-save();
 seedDemo();
 render();
+newCategory();
 </script>
 </body>
 </html>
